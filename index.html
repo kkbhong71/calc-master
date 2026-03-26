@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오성 연산 마스터 v3.0 - 오성중학교 기초 연산 집중 학습</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+:root {
+  --bg1: #0B0D1A; --bg2: #111328; --bg3: #181B35;
+  --card: rgba(255,255,255,0.04); --border: rgba(255,255,255,0.07);
+  --text: #E2E0EF; --sub: #7A7896;
+  --accent: #6C63FF; --accent2: #FF6B6B;
+  --gold: #FFD93D; --green: #2ED573;
+  --orange: #FF9F43; --pink: #FD79A8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif;
+  background: linear-gradient(160deg, var(--bg1), var(--bg2), var(--bg3));
+  color: var(--text); min-height: 100vh;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 12px 16px; }
+.card {
+  background: var(--card); border-radius: 18px; padding: 22px;
+  border: 1px solid var(--border); backdrop-filter: blur(10px);
+  margin-bottom: 14px; transition: transform 0.2s;
+}
+.card:hover { transform: translateY(-1px); }
+.btn {
+  padding: 11px 24px; border: none; border-radius: 12px; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: #fff; font-family: inherit;
+  background: linear-gradient(135deg, var(--accent), rgba(108,99,255,0.7));
+  box-shadow: 0 4px 14px rgba(108,99,255,0.25); transition: all 0.15s;
+}
+.btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-green { background: linear-gradient(135deg, var(--green), rgba(46,213,115,0.7)); box-shadow: 0 4px 14px rgba(46,213,115,0.25); }
+.btn-red { background: linear-gradient(135deg, var(--accent2), rgba(255,107,107,0.7)); box-shadow: 0 4px 14px rgba(255,107,107,0.25); }
+.btn-orange { background: linear-gradient(135deg, var(--orange), rgba(255,159,67,0.7)); box-shadow: 0 4px 14px rgba(255,159,67,0.25); }
+.btn-gray { background: linear-gradient(135deg, #555, #444); box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
+.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 9px; }
+.btn-full { width: 100%; }
+.input {
+  width: 100%; padding: 14px 16px; border: 2px solid var(--border);
+  border-radius: 14px; font-size: 20px; font-weight: 700; text-align: center;
+  background: rgba(255,255,255,0.06); color: #fff; outline: none;
+  font-family: 'Pretendard', monospace; transition: border-color 0.3s;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+.input-sm { font-size: 14px; padding: 10px 14px; text-align: left; }
+.tag {
+  display: inline-block; padding: 3px 9px; border-radius: 7px;
+  font-size: 11px; font-weight: 700;
+}
+.pbar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+.pfill {
+  position: absolute; top: 0; left: 0; height: 100%; border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.nav {
+  display: flex; gap: 3px; background: rgba(255,255,255,0.04); border-radius: 14px;
+  padding: 3px; margin-bottom: 16px; border: 1px solid var(--border);
+}
+.nav-btn {
+  flex: 1; padding: 9px 6px; border: none; border-radius: 11px; cursor: pointer;
+  font-size: 12px; font-weight: 500; background: transparent; color: var(--sub);
+  font-family: inherit; transition: all 0.2s;
+}
+.nav-btn.active { background: rgba(108,99,255,0.2); color: var(--accent); font-weight: 700; }
+.grid { display: grid; gap: 10px; }
+.grid-2 { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.text-center { text-align: center; }
+.mb-4 { margin-bottom: 4px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-20 { margin-bottom: 20px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.hidden { display: none !important; }
+
+.module-card {
+  border-radius: 16px; padding: 18px; cursor: pointer; transition: all 0.25s;
+}
+.module-card:hover { transform: translateY(-3px); }
+
+.question-box {
+  font-size: 26px; font-weight: 900; text-align: center; padding: 30px 16px;
+  background: rgba(255,255,255,0.03); border-radius: 16px;
+  font-family: 'Pretendard', 'Courier New', monospace; line-height: 1.5;
+  word-break: break-word;
+}
+
+.popup-overlay {
+  position: fixed; inset: 0; z-index: 999; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+}
+.popup-box {
+  background: var(--bg2); border-radius: 22px; padding: 36px; text-align: center;
+  max-width: 340px; width: 90%; border: 2px solid rgba(108,99,255,0.3);
+  box-shadow: 0 20px 60px rgba(108,99,255,0.2);
+  animation: pop 0.4s ease;
+}
+
+.review-item {
+  padding: 9px 12px; margin-bottom: 4px; border-radius: 10px; font-size: 13px;
+  border-left: 3px solid;
+}
+.review-ok { background: rgba(46,213,115,0.04); border-color: var(--green); }
+.review-fail { background: rgba(255,107,107,0.04); border-color: var(--accent2); }
+
+.timer-bar {
+  height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08);
+  margin-bottom: 12px; overflow: hidden;
+}
+.timer-fill {
+  height: 100%; border-radius: 2px; transition: width 0.1s linear;
+}
+
+.section-divider {
+  margin: 8px 0 10px; display: flex; align-items: center; gap: 8px;
+}
+.section-divider span { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.section-divider .line { flex: 1; height: 1px; }
+
+.stat-box {
+  text-align: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px;
+}
+.stat-icon { font-size: 22px; }
+.stat-val { font-size: 20px; font-weight: 800; margin-top: 2px; }
+.stat-label { font-size: 10px; color: var(--sub); }
+
+.wrong-note-item {
+  padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); margin-bottom: 8px;
+}
+
+.admin-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.admin-table th {
+  padding: 10px 8px; text-align: left; color: var(--sub); font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 11px;
+}
+.admin-table td {
+  padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+@keyframes pop { from { transform: scale(0.5); opacity:0 } to { transform: scale(1); opacity:1 } }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+
+/* 인쇄 스타일 */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .wrap { max-width: 100%; padding: 20px; }
+  .card { background: #fff !important; border: 1px solid #ddd !important; backdrop-filter: none !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .tag { background: #eee !important; color: #333 !important; }
+  .question-box { background: #f5f5f5 !important; color: #000 !important; }
+  .wrong-note-item { background: #fafafa !important; border: 1px solid #ddd !important; color: #000 !important; }
+  .stat-box { background: #f5f5f5 !important; }
+  * { color: #000 !important; }
+  .pfill { background: #666 !important; }
+  .pbar { background: #ddd !important; }
+}
+.print-only { display: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 🔢 오성 연산 마스터 v3.0 — GitHub Pages 배포용
+// ═══════════════════════════════════════════════════════════════
+
+// ── 유틸리티 ──
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const gcd = (a,b) => { a=Math.abs(a); b=Math.abs(b); while(b){[a,b]=[b,a%b]} return a; };
+const lcm = (a,b) => Math.abs(a*b)/gcd(a,b);
+const simplify = (n,d) => { if(d===0) return [n,1]; const s=d<0?-1:1; const g=gcd(Math.abs(n),Math.abs(d)); return [s*n/g, s*d/g]; };
+const fmtFrac = (n,d) => { if(d===1) return `${n}`; if(n===0) return "0"; return `${n}/${d}`; };
+
+// ── 모듈 정의 ──
+const MODULES = [
+  { id:"natural", name:"자연수 사칙연산", icon:"🔢", color:"#FF6B35", grade:"초5~6", desc:"큰 수의 덧셈·뺄셈·곱셈·나눗셈", levels:["두 자리 수 연산","세 자리 수 연산","큰 수 곱셈·나눗셈","복합 연산","괄호가 있는 식"] },
+  { id:"factor", name:"약수와 배수", icon:"🎯", color:"#E84393", grade:"초5~6", desc:"약수·배수·최대공약수·최소공배수", levels:["약수 구하기","배수 구하기","최대공약수(GCD)","최소공배수(LCM)","GCD·LCM 응용"] },
+  { id:"fraction", name:"분수의 연산", icon:"🍕", color:"#00B894", grade:"초5~6", desc:"진분수·대분수의 사칙연산", levels:["동분모 덧셈·뺄셈","이분모 덧셈·뺄셈","분수의 곱셈","분수의 나눗셈","대분수 혼합 연산"] },
+  { id:"decimal", name:"소수의 연산", icon:"🔬", color:"#0984E3", grade:"초5~6", desc:"소수의 덧셈·뺄셈·곱셈·나눗셈", levels:["소수 한 자리 덧뺄","소수 두 자리 덧뺄","소수의 곱셈","소수의 나눗셈","소수↔분수 변환"] },
+  { id:"mixed", name:"혼합 계산", icon:"⚡", color:"#6C5CE7", grade:"초5~중1", desc:"사칙연산 순서와 괄호 계산", levels:["연산 순서","괄호가 있는 식","여러 괄호","분수·소수 혼합","복잡한 혼합식"] },
+  { id:"integer", name:"정수의 연산", icon:"🌡️", color:"#FD79A8", grade:"중1", desc:"양수·음수·절댓값·정수 사칙연산", levels:["양수와 음수","절댓값","정수 덧셈·뺄셈","정수 곱셈·나눗셈","정수 혼합 연산"] },
+  { id:"rational", name:"유리수의 연산", icon:"🧪", color:"#00CEC9", grade:"중1", desc:"음의 분수·소수 포함 유리수 연산", levels:["유리수 대소비교","유리수 덧셈·뺄셈","유리수 곱셈","유리수 나눗셈","유리수 복합 연산"] },
+  { id:"power", name:"거듭제곱", icon:"💥", color:"#A29BFE", grade:"중1~2", desc:"거듭제곱과 지수법칙", levels:["거듭제곱 계산","밑이 음수","지수법칙 기초","지수법칙 응용","종합 문제"] },
+];
+
+const BADGES = [
+  { id:"first", name:"첫 발걸음", icon:"👣", desc:"첫 문제 풀기", cond:s=>s.total>=1 },
+  { id:"s3", name:"3일 연속", icon:"🔥", desc:"3일 연속 학습", cond:s=>s.streak>=3 },
+  { id:"s7", name:"불꽃 학습자", icon:"💪", desc:"7일 연속 학습", cond:s=>s.streak>=7 },
+  { id:"p10", name:"완벽한 10", icon:"💯", desc:"10문제 연속 정답", cond:s=>s.maxConsec>=10 },
+  { id:"t50", name:"풀이왕", icon:"📚", desc:"50문제 풀기", cond:s=>s.total>=50 },
+  { id:"t100", name:"100문제 달성", icon:"🏆", desc:"100문제", cond:s=>s.total>=100 },
+  { id:"t200", name:"연산 달인", icon:"🌟", desc:"200문제", cond:s=>s.total>=200 },
+  { id:"lv5", name:"레벨 5", icon:"⭐", desc:"레벨 5 도달", cond:s=>s.level>=5 },
+  { id:"lv10", name:"수학 챔피언", icon:"👑", desc:"레벨 10 도달", cond:s=>s.level>=10 },
+  { id:"allmod", name:"올라운더", icon:"🎪", desc:"모든 모듈 도전", cond:s=>MODULES.every(m=>(s.modSolved[m.id]||0)>=1) },
+  { id:"timer", name:"속도왕", icon:"⏱️", desc:"타이머 모드 완료", cond:s=>s.timerComplete>=1 },
+  { id:"note30", name:"복습왕", icon:"📝", desc:"오답노트 30문제 복습", cond:s=>s.noteReviewed>=30 },
+];
+
+const ADMIN_PW = "oseong2026";
+
+// ── 문제 생성 엔진 ──
+function genProblem(mod, lv) {
+  const fmt = n => n<0?`(${n})`:`${n}`;
+  const sup = n => String(n).split('').map(d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]).join('');
+
+  if(mod==="natural") {
+    if(lv===1){ const op=pick(["+","-","×","÷"]); let a,b,ans; if(op==="+"){a=rand(11,99);b=rand(11,99);ans=a+b} else if(op==="-"){a=rand(30,99);b=rand(10,a-1);ans=a-b} else if(op==="×"){a=rand(2,9);b=rand(11,30);ans=a*b} else{b=rand(2,9);ans=rand(3,15);a=b*ans} return{q:`${a} ${op} ${b}`,a:String(ans),h:`차근차근 ${op==="×"?"곱셈":op==="÷"?"나눗셈":op==="+"?"덧셈":"뺄셈"}을 계산하세요`}; }
+    if(lv===2){ const op=pick(["+","-","×"]); let a,b,ans; if(op==="+"){a=rand(100,999);b=rand(100,999);ans=a+b} else if(op==="-"){a=rand(300,999);b=rand(100,a);ans=a-b} else{a=rand(11,99);b=rand(11,50);ans=a*b} return{q:`${a} ${op} ${b}`,a:String(ans),h:"자릿수를 맞춰 계산하세요"}; }
+    if(lv===3){ if(pick([0,1])){const a=rand(12,50),b=rand(12,50);return{q:`${a} × ${b}`,a:String(a*b),h:"분배법칙: "+a+"×"+b}} else{const b=rand(11,30),ans=rand(10,40),a=b*ans;return{q:`${a} ÷ ${b}`,a:String(ans),h:b+"× ? = "+a}} }
+    if(lv===4){ const a=rand(10,30),b=rand(2,9),c=rand(5,20); const t=pick([0,1]); if(t===0){return{q:`${a} + ${b} × ${c}`,a:String(a+b*c),h:"곱셈 먼저!"}} else{return{q:`${a*b} - ${b} × ${c}`,a:String(a*b-b*c),h:"곱셈 먼저 → 뺄셈"}} }
+    if(lv===5){ const a=rand(2,8),b=rand(3,12),c=rand(2,6); if(pick([0,1])){return{q:`(${a} + ${b}) × ${c}`,a:String((a+b)*c),h:"괄호 안 먼저!"}} else{const d=rand(5,20);return{q:`${a} × (${b} + ${c}) - ${d}`,a:String(a*(b+c)-d),h:"① 괄호 → ② 곱셈 → ③ 뺄셈"}} }
+  }
+
+  if(mod==="factor") {
+    if(lv===1){ const n=pick([12,16,18,20,24,28,30,36,42,48]); let cnt=0; for(let i=1;i<=n;i++) if(n%i===0) cnt++; return{q:`${n}의 약수의 개수는?`,a:String(cnt),h:"1부터 "+n+"까지 나누어 떨어지는 수"}; }
+    if(lv===2){ const n=rand(3,9),k=rand(5,12); return{q:`${n}의 배수 중 ${k}번째로 작은 수는?`,a:String(n*k),h:n+" × "+k}; }
+    if(lv===3){ const a=pick([2,3,5,7])*pick([2,3,4,5]),b=pick([2,3,5,7])*pick([2,3,4,5]),g=gcd(a,b); return{q:`${a}과(와) ${b}의 최대공약수는?`,a:String(g),h:"소인수분해 → 공통 소인수의 곱"}; }
+    if(lv===4){ const a=pick([4,6,8,9,10,12,14,15]),b=pick([6,8,9,10,12,15,18,20]),l=lcm(a,b); return{q:`${a}과(와) ${b}의 최소공배수는?`,a:String(l),h:"LCM = ("+a+"×"+b+") ÷ GCD"}; }
+    if(lv===5){ if(pick([0,1])){const g=pick([4,6,8,12]),a=g*rand(2,5),b=g*rand(2,5); return{q:`사탕 ${a}개와 초콜릿 ${b}개를 최대한 많은 학생에게 남김없이 나눠주면 최대 몇 명?`,a:String(gcd(a,b)),h:"최대공약수 문제!"}} else{const a=pick([3,4,5,6]),b=pick([4,5,6,8]); return{q:`버스 A는 ${a}분마다, B는 ${b}분마다 출발. 동시 출발 후 다시 함께 출발은 몇 분 후?`,a:String(lcm(a,b)),h:"최소공배수 문제!"}} }
+  }
+
+  if(mod==="fraction") {
+    if(lv===1){ const d=pick([3,4,5,6,7,8]),op=pick(["+","-"]); let n1,n2; if(op==="+"){n1=rand(1,d-2);n2=rand(1,d-n1)} else{n1=rand(2,d-1);n2=rand(1,n1-1)} const[sn,sd]=simplify(op==="+"?n1+n2:n1-n2,d); return{q:`${n1}/${d} ${op} ${n2}/${d}`,a:fmtFrac(sn,sd),h:"분모 같으면 분자끼리! 기약분수로"}; }
+    if(lv===2){ let d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]); while(d2===d1) d2=pick([2,3,4,5,6]); const n1=rand(1,d1-1),n2=rand(1,d2-1),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${n1}/${d1} ${op} ${n2}/${d2}`,a:fmtFrac(sn,sd),h:"통분! 공통분모: "+cd}; }
+    if(lv===3){ const n1=rand(1,5),d1=pick([2,3,4,5,6,7]),n2=rand(1,5),d2=pick([2,3,4,5,7]); const[sn,sd]=simplify(n1*n2,d1*d2); return{q:`${n1}/${d1} × ${n2}/${d2}`,a:fmtFrac(sn,sd),h:"분자끼리, 분모끼리 곱한 후 약분!"}; }
+    if(lv===4){ const n1=rand(1,5),d1=pick([2,3,4,5,6]),n2=rand(1,5),d2=pick([2,3,4,5,6]); const[sn,sd]=simplify(n1*d2,d1*n2); return{q:`${n1}/${d1} ÷ ${n2}/${d2}`,a:fmtFrac(sn,sd),h:"역수로 바꿔 곱하기!"}; }
+    if(lv===5){ const w1=rand(1,3),n1=rand(1,3),d1=pick([2,3,4,5]),w2=rand(1,2),n2=rand(1,3),d2=pick([2,3,4,5]); const i1=w1*d1+n1,i2=w2*d2+n2,op=pick(["+","-","×"]); let rn,rd; if(op==="+"){const cd=lcm(d1,d2);rn=i1*(cd/d1)+i2*(cd/d2);rd=cd} else if(op==="-"){const cd=lcm(d1,d2);rn=i1*(cd/d1)-i2*(cd/d2);rd=cd} else{rn=i1*i2;rd=d1*d2} const[sn,sd]=simplify(rn,rd); return{q:`${w1}과${n1}/${d1} ${op} ${w2}과${n2}/${d2}`,a:fmtFrac(sn,sd),h:"대분수→가분수로 바꾼 후 계산!"}; }
+  }
+
+  if(mod==="decimal") {
+    if(lv===1){ const a=+(rand(11,99)/10).toFixed(1),b=+(rand(11,99)/10).toFixed(1),op=pick(["+","-"]); const mx=Math.max(a,b),mn=Math.min(a,b),r=op==="+"?a+b:mx-mn; return{q:`${op==="-"?mx:a} ${op} ${op==="-"?mn:b}`,a:parseFloat(r.toFixed(1)).toString(),h:"소수점 맞춰 계산"}; }
+    if(lv===2){ const a=+(rand(101,999)/100).toFixed(2),b=+(rand(101,999)/100).toFixed(2),op=pick(["+","-"]); const mx=Math.max(a,b),mn=Math.min(a,b),r=op==="+"?a+b:mx-mn; return{q:`${op==="-"?mx.toFixed(2):a.toFixed(2)} ${op} ${op==="-"?mn.toFixed(2):b.toFixed(2)}`,a:parseFloat(r.toFixed(2)).toString(),h:"소수점 둘째자리까지"}; }
+    if(lv===3){ const a=+(rand(11,50)/10).toFixed(1),b=rand(2,9); return{q:`${a} × ${b}`,a:parseFloat((a*b).toFixed(1)).toString(),h:"소수×자연수: 자연수처럼 곱한 후 소수점!"}; }
+    if(lv===4){ const b=pick([2,4,5,8]),ans=+(rand(11,50)/10).toFixed(1),a=parseFloat((ans*b).toFixed(1)); return{q:`${a} ÷ ${b}`,a:parseFloat(ans.toFixed(2)).toString(),h:"나눗셈 소수점 위치 주의"}; }
+    if(lv===5){ const d=pick([2,4,5,8]),n=rand(1,d-1),dec=n/d; const[sn,sd]=simplify(n,d); if(pick([0,1])){return{q:`${parseFloat(dec.toFixed(4))}을(를) 기약분수로 나타내면?`,a:fmtFrac(sn,sd),h:"소수→분수 변환 후 약분"}} else{return{q:`${sn}/${sd}을(를) 소수로 나타내면?`,a:parseFloat(dec.toFixed(4)).toString(),h:"분자÷분모"}} }
+  }
+
+  if(mod==="mixed") {
+    if(lv===1){ const a=rand(3,15),b=rand(2,8),c=rand(2,6); return{q:`${a} + ${b} × ${c}`,a:String(a+b*c),h:"곱셈 먼저!"}; }
+    if(lv===2){ const a=rand(2,6),b=rand(3,8),c=rand(2,5); return{q:`(${a} + ${b}) × ${c}`,a:String((a+b)*c),h:"괄호 먼저!"}; }
+    if(lv===3){ const a=rand(2,5),b=rand(2,5),c=rand(2,4),d=rand(1,10); return{q:`${a} × (${b} + ${c}) - ${d}`,a:String(a*(b+c)-d),h:"① 괄호 → ② 곱셈 → ③ 뺄셈"}; }
+    if(lv===4){ const n=rand(1,3),d=pick([2,4,5]),dec=rand(1,9)/10,op=pick(["+","-"]); return{q:`${n}/${d} ${op} ${dec}`,a:parseFloat((op==="+"?n/d+dec:n/d-dec).toFixed(2)).toString(),h:"분수↔소수 통일!"}; }
+    if(lv===5){ const a=rand(2,5),b=rand(2,6),c=rand(2,4),d=rand(1,3),e=rand(2,5); return{q:`${a} × (${b} + ${c}) - ${d} × ${e}`,a:String(a*(b+c)-d*e),h:"① 괄호 → ② 곱셈들 → ③ 뺄셈"}; }
+  }
+
+  if(mod==="integer") {
+    if(lv===1){ const a=rand(-10,10),b=rand(-10,10); return{q:`${fmt(a)}와(과) ${fmt(b)} 중 더 큰 수는?`,a:String(Math.max(a,b)),h:"수직선 오른쪽이 더 큰 수"}; }
+    if(lv===2){ const a=rand(-20,20); return{q:`|${a}| = ?`,a:String(Math.abs(a)),h:"0까지의 거리(항상 0 이상)"}; }
+    if(lv===3){ let a=rand(-15,15),b=rand(-15,15); if(a>=0&&b>=0) b=-rand(1,15); const op=pick(["+","-"]); return{q:`${fmt(a)} ${op} ${fmt(b)}`,a:String(op==="+"?a+b:a-b),h:op==="+"?"같은 부호→절댓값 더하기":"빼기→부호 바꿔 더하기"}; }
+    if(lv===4){ let a=rand(-12,12),b=rand(-12,12); while(b===0) b=rand(-12,-1); const op=pick(["×","÷"]); if(op==="×"){return{q:`${fmt(a)} × ${fmt(b)}`,a:String(a*b),h:"같은 부호→(+), 다른 부호→(-)"}} else{const ans=rand(-10,10);if(ans===0) return genProblem(mod,lv); const dv=ans*b; return{q:`${fmt(dv)} ÷ ${fmt(b)}`,a:String(ans),h:"나눗셈도 부호 규칙 동일!"}} }
+    if(lv===5){ const a=rand(-8,8),b=rand(-8,8),c=rand(2,5)*pick([1,-1]); if(pick([0,1])){return{q:`(${fmt(a)} + ${fmt(b)}) × ${fmt(c)}`,a:String((a+b)*c),h:"괄호 먼저 → 부호 규칙"}} else{return{q:`${fmt(a)} × ${fmt(b)} + ${fmt(c)}`,a:String(a*b+c),h:"곱셈 먼저 → 덧셈"}} }
+  }
+
+  if(mod==="rational") {
+    if(lv===1){ const d=pick([3,4,5,6]); let n1=rand(-d+1,d-1),n2=rand(-d+1,d-1); while(n2===n1) n2=rand(-d+1,d-1); const bigger=n1/d>n2/d?fmtFrac(n1,d):fmtFrac(n2,d); return{q:`${fmtFrac(n1,d)}와 ${fmtFrac(n2,d)} 중 큰 수는?`,a:bigger,h:"분모 같으면 분자 큰 것"}; }
+    if(lv===2){ const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${fmtFrac(n1,d1)} ${op} ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"통분(공통분모:"+cd+") → 계산 → 약분"}; }
+    if(lv===3){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,5]); const[sn,sd]=simplify(n1*n2,d1*d2); return{q:`${fmtFrac(n1,d1)} × ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"분자끼리, 분모끼리 곱 + 부호!"}; }
+    if(lv===4){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,4,5]); const[sn,sd]=simplify(n1*d2,d1*n2); return{q:`${fmtFrac(n1,d1)} ÷ ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"역수로 바꿔 곱하기 + 부호!"}; }
+    if(lv===5){ const n1=rand(1,3)*pick([1,-1]),d1=pick([2,3,4]),n2=rand(1,3)*pick([1,-1]),d2=pick([2,3,4]),n3=rand(1,4)*pick([1,-1]),d3=pick([2,3]); const cd=lcm(d1,d2),sumN=n1*(cd/d1)+n2*(cd/d2); const[sn,sd]=simplify(sumN*n3,cd*d3); return{q:`(${fmtFrac(n1,d1)} + ${fmtFrac(n2,d2)}) × ${fmtFrac(n3,d3)}`,a:fmtFrac(sn,sd),h:"괄호 통분 → 곱셈 → 약분!"}; }
+  }
+
+  if(mod==="power") {
+    if(lv===1){ const b=rand(2,9),e=pick([2,3]); return{q:`${b}${sup(e)} = ?`,a:String(Math.pow(b,e)),h:b+"를 "+e+"번 곱하기"}; }
+    if(lv===2){ const b=rand(2,5)*-1,e=pick([2,3]); return{q:`(${b})${sup(e)} = ?`,a:String(Math.pow(b,e)),h:"짝수제곱→양수, 홀수제곱→음수"}; }
+    if(lv===3){ const b=rand(2,5),e1=rand(2,4),e2=rand(2,4); return{q:`${b}${sup(e1)} × ${b}${sup(e2)} = ${b}의 몇 제곱?`,a:String(e1+e2),h:"같은 밑의 곱→지수 더하기! "+e1+"+"+e2}; }
+    if(lv===4){ const b=rand(2,4),e1=rand(2,3),e2=rand(2,3); return{q:`(${b}${sup(e1)})${sup(e2)} = ${b}의 몇 제곱?`,a:String(e1*e2),h:"거듭제곱의 거듭제곱→지수 곱하기!"}; }
+    if(lv===5){ const a=rand(2,4),b=rand(2,3); return{q:`${a}${sup(b)} + ${b}${sup(a)} = ?`,a:String(Math.pow(a,b)+Math.pow(b,a)),h:a+sup(b)+"="+Math.pow(a,b)+", "+b+sup(a)+"="+Math.pow(b,a)}; }
+  }
+
+  return{q:"1 + 1",a:"2",h:"기본"};
+}
+
+// ── 앱 상태 ──
+let state = {
+  view: 'home', curMod: null, level: 1,
+  prob: null, ans: '', fb: null, hint: false,
+  quiz: { cur:0, tot:10, ok:0, results:[] },
+  timerMode: false, timerSec: 30, timerLeft: 30, timerInterval: null,
+  isAdmin: false,
+};
+
+const initData = () => ({
+  name:'', xp:0, level:1, total:0, correct:0,
+  streak:0, lastDate:null, consec:0, maxConsec:0,
+  badges:[], modSolved:{}, modCorrect:{},
+  wrongNotes:[], joinDate:null,
+  timerComplete:0, noteReviewed:0,
+});
+
+let data = initData();
+
+// ── 저장/로드 ──
+function saveData() { try{localStorage.setItem('calc_master_v3', JSON.stringify(data))}catch{} }
+function loadData() {
+  try {
+    const s = localStorage.getItem('calc_master_v3');
+    if(s) { data = {...initData(), ...JSON.parse(s)}; return true; }
+  } catch{}
+  return false;
+}
+
+// ── 레벨 ──
+function xpFor(lv) { return lv*80+(lv-1)*40; }
+function getLv(xp) { let lv=1,t=0; while(t+xpFor(lv)<=xp){t+=xpFor(lv);lv++} return{level:lv,cur:xp-t,need:xpFor(lv)}; }
+
+// ── 출석 ──
+function checkStreak() {
+  const today = new Date().toISOString().slice(0,10);
+  if(data.lastDate===today) return;
+  const yday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  data.streak = data.lastDate===yday ? data.streak+1 : 1;
+  data.lastDate = today;
+}
+
+// ── 렌더링 ──
+function render() {
+  const app = $('#app');
+  if(!data.name) { renderNameInput(); return; }
+
+  const lv = getLv(data.xp);
+  const acc = data.total>0 ? Math.round(data.correct/data.total*100) : 0;
+
+  let html = `
+    <div class="flex items-center justify-between mb-12 no-print" style="padding:6px 0">
+      <div class="flex items-center gap-8" style="cursor:pointer" onclick="go('home')">
+        <span style="font-size:26px">🔢</span>
+        <div>
+          <div style="font-size:17px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</div>
+          <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v3.0 · K.G.B</div>
+        </div>
+      </div>
+      ${state.view!=='quiz'?`<div class="flex items-center gap-8">
+        <span style="font-size:12px;color:var(--gold);font-weight:700">⚡${data.xp}</span>
+        <span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${lv.level}</span>
+      </div>`:''}
+    </div>`;
+
+  // 네비게이션
+  if(!['quiz','result','module','wrongNote','wrongReview'].includes(state.view)) {
+    html += `<div class="nav no-print">
+      ${[{id:'home',l:'🏠 홈'},{id:'profile',l:'🏅 프로필'},{id:'wrong',l:'📝 오답노트'},{id:'rank',l:'🏆 랭킹'},{id:'admin',l:'🔐 관리자'}]
+        .map(t=>`<button class="nav-btn ${state.view===t.id?'active':''}" onclick="go('${t.id}')">${t.l}</button>`).join('')}
+    </div>`;
+  }
+
+  // 뷰 렌더링
+  if(state.view==='home') html += renderHome(lv, acc);
+  else if(state.view==='module') html += renderModule();
+  else if(state.view==='quiz') html += renderQuiz();
+  else if(state.view==='result') html += renderResult();
+  else if(state.view==='profile') html += renderProfile(lv, acc);
+  else if(state.view==='wrong') html += renderWrong();
+  else if(state.view==='wrongNote') html += renderWrongNote();
+  else if(state.view==='wrongReview') html += renderWrongReview();
+  else if(state.view==='rank') html += renderRank(lv);
+  else if(state.view==='admin') html += renderAdmin();
+  else if(state.view==='adminDash') html += renderAdminDash();
+
+  html += `<div class="text-center no-print" style="padding:20px 0 12px;font-size:10px;color:#333">
+    오성 연산 마스터 v3.0 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
+
+  app.innerHTML = html;
+
+  // 퀴즈 입력 포커스
+  if(state.view==='quiz') {
+    const inp = $('#quiz-input');
+    if(inp && !state.fb) setTimeout(()=>inp.focus(), 50);
+  }
+}
+
+function go(view) {
+  if(state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+  state.view = view;
+  render();
+}
+
+// ── 이름 입력 ──
+function renderNameInput() {
+  $('#app').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:92vh">
+      <div class="card text-center" style="max-width:400px;width:100%;padding:36px">
+        <div style="font-size:52px;margin-bottom:12px">🔢</div>
+        <h1 style="font-size:24px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</h1>
+        <p style="color:var(--sub);font-size:13px;margin-bottom:6px">기초 연산 집중 학습 프로그램</p>
+        <p style="color:var(--sub);font-size:11px;margin-bottom:24px">초등 5~6학년 · 중학교 기초 연산 완전 정복</p>
+        <input class="input mb-16" id="name-input" placeholder="이름을 입력하세요" onkeydown="if(event.key==='Enter')setName()">
+        <button class="btn btn-full" onclick="setName()">🚀 학습 시작</button>
+      </div>
+    </div>`;
+}
+
+function setName() {
+  const v = ($('#name-input')||{}).value;
+  if(!v || !v.trim()) return;
+  const now = new Date().toISOString().slice(0,10);
+  data.name = v.trim();
+  data.joinDate = now;
+  data.lastDate = now;
+  data.streak = 1;
+  saveData();
+  render();
+}
+
+// ── 홈 ──
+function renderHome(lv, acc) {
+  let h = `
+  <div class="card flex items-center gap-12 flex-wrap">
+    <div style="width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0">${data.name[0]}</div>
+    <div style="flex:1;min-width:100px">
+      <div style="font-weight:800;font-size:16px">${data.name}</div>
+      <div class="flex gap-8 mt-8 flex-wrap">
+        <span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${lv.level}</span>
+        <span class="tag" style="background:rgba(255,107,107,0.15);color:var(--accent2)">🔥 ${data.streak}일</span>
+        <span class="tag" style="background:rgba(46,213,115,0.15);color:var(--green)">정확도 ${acc}%</span>
+      </div>
+    </div>
+    <div style="text-align:right"><div style="font-size:18px;font-weight:800;color:var(--gold)">⚡ ${data.xp} XP</div></div>
+  </div>
+  <div class="card" style="padding:14px">
+    <div class="flex justify-between mb-8">
+      <span style="font-size:12px;color:var(--sub)">Lv.${lv.level} → Lv.${lv.level+1}</span>
+      <span style="font-size:12px;color:var(--accent);font-weight:700">${lv.cur}/${lv.need}</span>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${lv.cur/lv.need*100}%;background:linear-gradient(90deg,var(--accent),rgba(108,99,255,0.6))"></div></div>
+  </div>`;
+
+  // 초등 모듈
+  const elem = MODULES.filter(m=>["natural","factor","fraction","decimal","mixed"].includes(m.id));
+  const mid = MODULES.filter(m=>["integer","rational","power"].includes(m.id));
+
+  h += `<div class="section-divider"><span style="color:var(--gold)">📗 초등 5~6학년 과정</span><div class="line" style="background:rgba(255,217,61,0.3)"></div></div>`;
+  h += `<div class="grid grid-2 mb-16">`;
+  elem.forEach(m => {
+    const s=data.modSolved[m.id]||0, c=data.modCorrect[m.id]||0, a=s>0?Math.round(c/s*100):0;
+    h += `<div class="module-card" style="background:linear-gradient(135deg,${m.color}15,${m.color}08);border:1px solid ${m.color}33" onclick="selectModule('${m.id}')">
+      <div class="flex justify-between" style="align-items:flex-start"><span style="font-size:32px">${m.icon}</span><span class="tag" style="background:${m.color}22;color:${m.color}">${m.grade}</span></div>
+      <div style="font-weight:800;font-size:15px;margin-top:10px;margin-bottom:3px">${m.name}</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:10px">${m.desc}</div>
+      <div style="font-size:10px;color:var(--sub)">풀이 ${s}${s>0?` · 정확도 ${a}%`:''}</div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  h += `<div class="section-divider"><span style="color:var(--accent2)">📘 중학교 과정</span><div class="line" style="background:rgba(255,107,107,0.3)"></div></div>`;
+  h += `<div class="grid grid-2 mb-16">`;
+  mid.forEach(m => {
+    const s=data.modSolved[m.id]||0, c=data.modCorrect[m.id]||0, a=s>0?Math.round(c/s*100):0;
+    h += `<div class="module-card" style="background:linear-gradient(135deg,${m.color}15,${m.color}08);border:1px solid ${m.color}33" onclick="selectModule('${m.id}')">
+      <div class="flex justify-between" style="align-items:flex-start"><span style="font-size:32px">${m.icon}</span><span class="tag" style="background:${m.color}22;color:${m.color}">${m.grade}</span></div>
+      <div style="font-weight:800;font-size:15px;margin-top:10px;margin-bottom:3px">${m.name}</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.5;margin-bottom:10px">${m.desc}</div>
+      <div style="font-size:10px;color:var(--sub)">풀이 ${s}${s>0?` · 정확도 ${a}%`:''}</div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // 통계
+  h += `<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">📊 학습 현황</div>
+    <div class="grid grid-4">${[
+      {l:'총 풀이',v:data.total,i:'✏️'},{l:'정답 수',v:data.correct,i:'✅'},
+      {l:'최다 연속',v:data.maxConsec,i:'🎯'},{l:'오답노트',v:data.wrongNotes.length,i:'📝'}
+    ].map(s=>`<div class="stat-box"><div class="stat-icon">${s.i}</div><div class="stat-val">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}</div></div>`;
+
+  return h;
+}
+
+// ── 모듈 선택 ──
+function selectModule(id) { state.curMod = id; go('module'); }
+
+function renderModule() {
+  const m = MODULES.find(x=>x.id===state.curMod);
+  if(!m) return '';
+  let h = `<div class="card">
+    <div class="flex items-center gap-12 mb-20">
+      <span style="font-size:44px">${m.icon}</span>
+      <div><h2 style="font-size:20px;font-weight:900;margin:0">${m.name}</h2>
+        <div class="flex gap-8 mt-4"><span class="tag" style="background:${m.color}22;color:${m.color}">${m.grade}</span><span style="font-size:12px;color:var(--sub)">${m.desc}</span></div>
+      </div>
+    </div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px">단계 선택</div>`;
+
+  m.levels.forEach((lbl, i) => {
+    const lv = i+1, sel = state.level===lv;
+    h += `<div onclick="state.level=${lv};render()" style="padding:13px 16px;border-radius:12px;cursor:pointer;background:${sel?m.color+'18':'rgba(255,255,255,0.02)'};border:1.5px solid ${sel?m.color:'var(--border)'};margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s">
+      <div><span style="font-weight:700;font-size:13px;color:${sel?m.color:'var(--text)'}">⭐×${lv} 단계 ${lv}</span><span style="font-size:12px;color:var(--sub);margin-left:10px">${lbl}</span></div>
+      ${sel?`<span style="color:${m.color};font-weight:800">✓</span>`:''}
+    </div>`;
+  });
+
+  h += `<div style="margin-top:16px;padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+    <div class="flex items-center gap-8 mb-8">
+      <span style="font-size:14px;font-weight:700">⏱️ 타이머 모드</span>
+      <label style="cursor:pointer;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" ${state.timerMode?'checked':''} onchange="state.timerMode=this.checked;render()">
+        <span style="font-size:12px;color:var(--sub)">${state.timerMode?'ON':'OFF'}</span>
+      </label>
+    </div>
+    ${state.timerMode?`<div class="flex items-center gap-8">
+      <span style="font-size:12px;color:var(--sub)">문제당 시간:</span>
+      ${[15,30,45,60].map(s=>`<button class="btn btn-sm ${state.timerSec===s?'':'btn-gray'}" onclick="state.timerSec=${s};render()" style="padding:5px 10px;font-size:11px">${s}초</button>`).join('')}
+    </div>`:''}
+  </div>`;
+
+  h += `<div class="flex gap-10 mt-16">
+    <button class="btn btn-gray" onclick="go('home')">← 뒤로</button>
+    <button class="btn" style="flex:1;background:linear-gradient(135deg,${m.color},${m.color}bb);box-shadow:0 4px 14px ${m.color}33" onclick="startQuiz()">🚀 학습 시작 (10문제)</button>
+  </div></div>`;
+  return h;
+}
+
+// ── 퀴즈 시작 ──
+function startQuiz() {
+  state.quiz = { cur:0, tot:10, ok:0, results:[] };
+  state.fb = null; state.hint = false; state.ans = '';
+  state.prob = genProblem(state.curMod, state.level);
+  state.timerLeft = state.timerSec;
+  state.view = 'quiz';
+  render();
+  if(state.timerMode) startTimer();
+}
+
+function startTimer() {
+  if(state.timerInterval) clearInterval(state.timerInterval);
+  state.timerLeft = state.timerSec;
+  state.timerInterval = setInterval(() => {
+    state.timerLeft -= 0.1;
+    const bar = $('#timer-bar-fill');
+    if(bar) bar.style.width = (state.timerLeft/state.timerSec*100)+'%';
+    const txt = $('#timer-text');
+    if(txt) txt.textContent = Math.ceil(state.timerLeft)+'초';
+    if(state.timerLeft <= 0) {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+      submitAnswer(true);
+    }
+  }, 100);
+}
+
+// ── 퀴즈 렌더 ──
+function renderQuiz() {
+  const m = MODULES.find(x=>x.id===state.curMod);
+  if(!m || !state.prob) return '';
+  const pct = state.quiz.cur/state.quiz.tot*100;
+
+  let h = `<div class="card" style="padding:14px">
+    <div class="flex justify-between mb-8">
+      <span style="font-size:12px;color:var(--sub)">${m.icon} ${m.name} · 단계 ${state.level}${state.timerMode?' · ⏱️ 타이머':''}</span>
+      <span style="font-size:12px;font-weight:700">${state.quiz.cur}/${state.quiz.tot} · ✅ ${state.quiz.ok}</span>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${pct}%;background:linear-gradient(90deg,${m.color},${m.color}99)"></div></div>
+  </div>`;
+
+  h += `<div class="card" style="padding:28px;border-color:${state.fb?(state.fb.ok?'rgba(46,213,115,0.3)':'rgba(255,107,107,0.3)'):'var(--border)'};transition:border-color 0.3s">`;
+
+  // 타이머 바
+  if(state.timerMode && !state.fb) {
+    const pct = state.timerLeft/state.timerSec*100;
+    const color = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--orange)' : 'var(--accent2)';
+    h += `<div class="flex justify-between mb-4">
+      <span style="font-size:11px;color:var(--sub)">⏱️ 남은 시간</span>
+      <span id="timer-text" style="font-size:12px;font-weight:700;color:${color}">${Math.ceil(state.timerLeft)}초</span>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+  }
+
+  h += `<div class="flex justify-between mb-16">
+    <span style="font-size:12px;color:var(--sub)">문제 ${state.quiz.cur+(state.fb?0:1)}</span>
+    <span class="tag" style="background:${m.color}22;color:${m.color}">${'⭐'.repeat(state.level)}</span>
+  </div>
+  <div class="question-box mb-20">${state.prob.q}${state.prob.q.includes('?')?'':' = ?'}</div>`;
+
+  if(state.hint) {
+    h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
+  }
+
+  h += `<input class="input mb-12" id="quiz-input" placeholder="정답 입력 (예: 3/4, -5, 12.5)"
+    value="${state.ans}" oninput="state.ans=this.value"
+    onkeydown="if(event.key==='Enter'){state.fb?nextProblem():submitAnswer()}"
+    ${state.fb?'disabled':''}>`;
+
+  if(state.fb) {
+    h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
+      <div style="font-weight:800;font-size:16px">${state.fb.ok?'🎉 정답!':'😔 아쉬워요!'}</div>
+      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${state.prob.a}</span></div>`:''}
+      <div style="font-size:12px;color:var(--gold);margin-top:4px">+${state.fb.xp} XP</div>
+    </div>`;
+  }
+
+  h += `<div class="flex gap-8">`;
+  if(!state.fb && !state.hint) h += `<button class="btn btn-gray btn-sm" onclick="state.hint=true;render()">💡 힌트</button>`;
+  if(!state.fb) h += `<button class="btn" style="flex:1;background:linear-gradient(135deg,${m.color},${m.color}bb)" onclick="submitAnswer()">제출</button>`;
+  else h += `<button class="btn" style="flex:1;background:linear-gradient(135deg,${m.color},${m.color}bb)" onclick="nextProblem()">${state.quiz.cur>=state.quiz.tot?'📊 결과':'다음 →'}</button>`;
+  h += `</div></div>`;
+
+  h += `<button class="btn btn-gray btn-sm btn-full mt-8 no-print" onclick="if(confirm('학습을 중단할까요?'))go('home')">학습 중단</button>`;
+  return h;
+}
+
+// ── 답 제출 ──
+function submitAnswer(timedOut) {
+  if(state.fb) return;
+  if(state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
+
+  const userAns = (state.ans||'').trim();
+  const normalize = s => s.replace(/\s/g,'').replace(/\+/g,'');
+  const isOk = !timedOut && userAns && normalize(userAns) === normalize(state.prob.a);
+  const xpG = isOk ? (8 + state.level*4 + (state.hint?0:4) + (state.timerMode?5:0)) : 2;
+
+  state.fb = { ok:isOk, xp:xpG };
+  const r = { ok:isOk, q:state.prob.q, ua:timedOut?'(시간초과)':userAns, ca:state.prob.a, h:state.prob.h, mod:state.curMod, lv:state.level, date:new Date().toISOString().slice(0,10) };
+  state.quiz.results.push(r);
+  state.quiz.cur++;
+  if(isOk) state.quiz.ok++;
+
+  checkStreak();
+  data.xp += xpG;
+  data.total++;
+  if(isOk) { data.correct++; data.consec++; } else { data.consec = 0; }
+  data.maxConsec = Math.max(data.maxConsec, data.consec);
+  data.modSolved[state.curMod] = (data.modSolved[state.curMod]||0)+1;
+  if(isOk) data.modCorrect[state.curMod] = (data.modCorrect[state.curMod]||0)+1;
+  data.level = getLv(data.xp).level;
+
+  // 오답노트 저장
+  if(!isOk) {
+    data.wrongNotes.unshift(r);
+    if(data.wrongNotes.length > 200) data.wrongNotes = data.wrongNotes.slice(0, 200);
+  }
+
+  // 뱃지
+  checkBadges();
+  saveData();
+  render();
+}
+
+function checkBadges() {
+  BADGES.forEach(b => {
+    if(!data.badges.includes(b.id) && b.cond(data)) {
+      data.badges.push(b.id);
+      setTimeout(() => showBadgePopup(b), 300);
+    }
+  });
+}
+
+function showBadgePopup(b) {
+  const ol = document.createElement('div');
+  ol.className = 'popup-overlay';
+  ol.onclick = () => ol.remove();
+  ol.innerHTML = `<div class="popup-box" onclick="event.stopPropagation()">
+    <div style="font-size:64px;margin-bottom:12px">${b.icon}</div>
+    <div style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:2px">🎉 새 뱃지!</div>
+    <div style="font-size:20px;font-weight:900;margin-top:6px">${b.name}</div>
+    <div style="color:var(--sub);font-size:13px;margin-top:4px">${b.desc}</div>
+    <button class="btn mt-16" onclick="this.closest('.popup-overlay').remove()">확인</button>
+  </div>`;
+  document.body.appendChild(ol);
+}
+
+// ── 다음 문제 ──
+function nextProblem() {
+  if(state.quiz.cur >= state.quiz.tot) {
+    if(state.timerMode) data.timerComplete = (data.timerComplete||0)+1;
+    saveData();
+    go('result');
+    return;
+  }
+  state.fb = null; state.hint = false; state.ans = '';
+  state.prob = genProblem(state.curMod, state.level);
+  state.timerLeft = state.timerSec;
+  render();
+  if(state.timerMode) startTimer();
+}
+
+// ── 결과 ──
+function renderResult() {
+  const m = MODULES.find(x=>x.id===state.curMod);
+  const score = Math.round(state.quiz.ok/state.quiz.tot*100);
+  const grade = score>=90?'S':score>=80?'A':score>=70?'B':score>=60?'C':'D';
+  const gc = {S:'var(--gold)',A:'var(--green)',B:'var(--accent)',C:'var(--orange)',D:'var(--accent2)'};
+  const msg = score>=90?'완벽해요! 🌟':score>=70?'잘했어요! 💪':score>=50?'조금만 더! 📚':'기초부터 다시! 🌱';
+
+  let h = `<div class="card text-center" style="padding:28px">
+    <div class="print-only" style="margin-bottom:16px;font-size:18px;font-weight:800">📋 오성 연산 마스터 - 학습 결과 리포트</div>
+    <div class="print-only" style="margin-bottom:8px;font-size:13px;color:#666">학생: ${data.name} | 날짜: ${new Date().toLocaleDateString('ko-KR')}</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:8px">${m?.icon} ${m?.name} · 단계 ${state.level}${state.timerMode?' · ⏱️ 타이머 모드':''}</div>
+    <div style="width:88px;height:88px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:${gc[grade]};background:rgba(255,255,255,0.04);border:3px solid currentColor">${grade}</div>
+    <div style="font-size:28px;font-weight:900">${score}점</div>
+    <div style="color:var(--sub);margin-bottom:20px;font-size:14px">${msg}</div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div class="stat-box"><div style="font-size:22px;font-weight:800;color:var(--green)">${state.quiz.ok}</div><div class="stat-label">정답</div></div>
+      <div class="stat-box"><div style="font-size:22px;font-weight:800;color:var(--accent2)">${state.quiz.tot-state.quiz.ok}</div><div class="stat-label">오답</div></div>
+    </div>`;
+
+  // 문제 리뷰
+  h += `<div style="text-align:left;margin-bottom:20px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 풀이 내역</div>`;
+  state.quiz.results.forEach(r => {
+    h += `<div class="review-item ${r.ok?'review-ok':'review-fail'}">
+      ${r.ok?'✅':'❌'} ${r.q} = ${r.ok?r.ca:`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${r.ca}</span>`}
+    </div>`;
+  });
+  h += `</div>`;
+
+  if(score<80) {
+    h += `<div style="text-align:left;padding:12px 16px;border-radius:12px;margin-bottom:16px;background:rgba(108,99,255,0.06);border:1px solid rgba(108,99,255,0.2);font-size:13px;color:var(--accent)">
+      💡 <strong>AI 추천:</strong> ${score<50?`단계 ${Math.max(1,state.level-1)}부터 다시 연습하세요!`:'틀린 유형을 중심으로 한 번 더!'}
+    </div>`;
+  }
+
+  h += `<div class="flex gap-8 no-print">
+    <button class="btn btn-gray" onclick="go('home')">🏠 홈</button>
+    <button class="btn" style="flex:1" onclick="startQuiz()">🔄 다시 도전</button>
+    ${score>=80&&state.level<5?`<button class="btn btn-green" onclick="state.level++;startQuiz()">⬆️ 다음 단계</button>`:''}
+  </div>
+  <div class="flex gap-8 mt-8 no-print">
+    <button class="btn btn-orange btn-sm btn-full" onclick="window.print()">🖨️ 결과 인쇄</button>
+  </div>
+  </div>`;
+  return h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📝 오답노트
+// ═══════════════════════════════════════════════════════════
+function renderWrong() {
+  const notes = data.wrongNotes || [];
+  let h = `<div class="card">
+    <div class="flex justify-between items-center mb-16">
+      <h2 style="font-size:18px;font-weight:800;margin:0">📝 오답노트</h2>
+      <div class="flex gap-8">
+        ${notes.length>0?`<button class="btn btn-orange btn-sm" onclick="printWrongNotes()">🖨️ 인쇄</button>`:''}
+        ${notes.length>0?`<button class="btn btn-green btn-sm" onclick="startWrongReview()">🔄 복습 시작</button>`:''}
+      </div>
+    </div>`;
+
+  if(notes.length === 0) {
+    h += `<div class="text-center" style="padding:40px 0;color:var(--sub)">
+      <div style="font-size:48px;margin-bottom:12px">🎉</div>
+      <div style="font-size:14px">아직 오답이 없어요!</div>
+      <div style="font-size:12px;margin-top:4px">학습을 시작하면 틀린 문제가 여기에 자동 저장됩니다.</div>
+    </div>`;
+  } else {
+    // 모듈별 분류
+    const grouped = {};
+    notes.forEach(n => {
+      if(!grouped[n.mod]) grouped[n.mod] = [];
+      grouped[n.mod].push(n);
+    });
+
+    h += `<div style="font-size:12px;color:var(--sub);margin-bottom:14px">총 ${notes.length}개의 오답 (최근 200개 저장)</div>`;
+
+    Object.keys(grouped).forEach(modId => {
+      const m = MODULES.find(x=>x.id===modId);
+      const items = grouped[modId];
+      h += `<div style="margin-bottom:16px">
+        <div class="flex items-center gap-8 mb-8">
+          <span style="font-size:18px">${m?.icon||'📚'}</span>
+          <span style="font-size:14px;font-weight:700">${m?.name||modId}</span>
+          <span class="tag" style="background:rgba(255,107,107,0.15);color:var(--accent2)">${items.length}개</span>
+        </div>`;
+      items.slice(0, 10).forEach((n, i) => {
+        h += `<div class="wrong-note-item">
+          <div class="flex justify-between items-center mb-4">
+            <span style="font-size:13px;font-weight:700">${n.q}${n.q.includes('?')?'':' = ?'}</span>
+            <span style="font-size:10px;color:var(--sub)">${n.date} · 단계${n.lv}</span>
+          </div>
+          <div style="font-size:12px">
+            <span style="color:var(--accent2)">내 답: ${n.ua}</span>
+            <span style="margin:0 8px;color:var(--sub)">→</span>
+            <span style="color:var(--green);font-weight:700">정답: ${n.ca}</span>
+          </div>
+          <div style="font-size:11px;color:var(--gold);margin-top:4px">💡 ${n.h}</div>
+        </div>`;
+      });
+      if(items.length > 10) h += `<div style="font-size:11px;color:var(--sub);text-align:center">... 외 ${items.length-10}개</div>`;
+      h += `</div>`;
+    });
+
+    h += `<button class="btn btn-red btn-sm btn-full mt-8" onclick="if(confirm('모든 오답을 삭제할까요?')){data.wrongNotes=[];saveData();render()}">🗑️ 오답노트 전체 삭제</button>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
+// ── 오답 복습 모드 ──
+function startWrongReview() {
+  const notes = data.wrongNotes || [];
+  if(notes.length === 0) return;
+  // 랜덤 10개 선택
+  const shuffled = [...notes].sort(() => Math.random()-0.5);
+  state.wrongReviewList = shuffled.slice(0, Math.min(10, shuffled.length));
+  state.wrongReviewIdx = 0;
+  state.wrongReviewOk = 0;
+  state.wrongReviewResults = [];
+  state.fb = null; state.hint = false; state.ans = '';
+  state.prob = { q: state.wrongReviewList[0].q, a: state.wrongReviewList[0].ca, h: state.wrongReviewList[0].h };
+  go('wrongReview');
+}
+
+function renderWrongReview() {
+  const idx = state.wrongReviewIdx;
+  const list = state.wrongReviewList;
+  const total = list.length;
+
+  if(idx >= total) {
+    // 복습 완료
+    data.noteReviewed = (data.noteReviewed||0) + total;
+    checkBadges();
+    saveData();
+
+    let h = `<div class="card text-center" style="padding:28px">
+      <div style="font-size:48px;margin-bottom:12px">📝</div>
+      <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">오답 복습 완료!</h2>
+      <div style="font-size:28px;font-weight:900;margin-bottom:4px">${state.wrongReviewOk}/${total} 정답</div>
+      <div style="color:var(--sub);font-size:13px;margin-bottom:20px">${state.wrongReviewOk===total?'완벽해요! 모든 오답을 정복했어요! 🌟':'계속 복습하면 반드시 나아져요! 💪'}</div>`;
+
+    state.wrongReviewResults.forEach(r => {
+      h += `<div class="review-item ${r.ok?'review-ok':'review-fail'}" style="text-align:left">
+        ${r.ok?'✅':'❌'} ${r.q} = ${r.ok?r.ca:`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${r.ca}</span>`}
+      </div>`;
+    });
+
+    // 맞힌 문제는 오답노트에서 제거
+    if(state.wrongReviewOk > 0) {
+      const solvedQs = state.wrongReviewResults.filter(r=>r.ok).map(r=>r.q);
+      data.wrongNotes = data.wrongNotes.filter(n => !solvedQs.includes(n.q));
+      saveData();
+      h += `<div style="font-size:12px;color:var(--green);margin-top:12px">✅ 정답 처리된 ${state.wrongReviewOk}개 문제가 오답노트에서 제거되었습니다.</div>`;
+    }
+
+    h += `<div class="flex gap-8 mt-16">
+      <button class="btn btn-gray" onclick="go('wrong')">📝 오답노트</button>
+      <button class="btn" style="flex:1" onclick="go('home')">🏠 홈</button>
+    </div></div>`;
+    return h;
+  }
+
+  const item = list[idx];
+  const pct = idx/total*100;
+
+  let h = `<div class="card" style="padding:14px">
+    <div class="flex justify-between mb-8">
+      <span style="font-size:12px;color:var(--sub)">📝 오답 복습</span>
+      <span style="font-size:12px;font-weight:700">${idx}/${total} · ✅ ${state.wrongReviewOk}</span>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${pct}%;background:linear-gradient(90deg,var(--orange),rgba(255,159,67,0.6))"></div></div>
+  </div>
+  <div class="card" style="padding:28px">
+    <div class="flex justify-between mb-16">
+      <span style="font-size:12px;color:var(--sub)">복습 ${idx+1}/${total}</span>
+      <span class="tag" style="background:rgba(255,159,67,0.15);color:var(--orange)">오답 복습</span>
+    </div>
+    <div class="question-box mb-20">${state.prob.q}${state.prob.q.includes('?')?'':' = ?'}</div>`;
+
+  if(state.hint) {
+    h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
+  }
+
+  h += `<input class="input mb-12" id="quiz-input" placeholder="정답 입력"
+    value="${state.ans}" oninput="state.ans=this.value"
+    onkeydown="if(event.key==='Enter'){state.fb?nextWrongReview():submitWrongReview()}"
+    ${state.fb?'disabled':''}>`;
+
+  if(state.fb) {
+    h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
+      <div style="font-weight:800;font-size:16px">${state.fb.ok?'🎉 정답! 오답 정복!':'😔 다음에 다시 도전!'}</div>
+      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${state.prob.a}</span></div>`:''}
+    </div>`;
+  }
+
+  h += `<div class="flex gap-8">`;
+  if(!state.fb && !state.hint) h += `<button class="btn btn-gray btn-sm" onclick="state.hint=true;render()">💡 힌트</button>`;
+  if(!state.fb) h += `<button class="btn btn-orange" style="flex:1" onclick="submitWrongReview()">제출</button>`;
+  else h += `<button class="btn btn-orange" style="flex:1" onclick="nextWrongReview()">${idx+1>=total?'📊 결과':'다음 →'}</button>`;
+  h += `</div></div>`;
+  return h;
+}
+
+function submitWrongReview() {
+  if(state.fb) return;
+  const userAns = (state.ans||'').trim();
+  const normalize = s => s.replace(/\s/g,'').replace(/\+/g,'');
+  const isOk = userAns && normalize(userAns) === normalize(state.prob.a);
+  state.fb = { ok:isOk };
+  if(isOk) state.wrongReviewOk++;
+  state.wrongReviewResults.push({ ok:isOk, q:state.prob.q, ua:userAns, ca:state.prob.a });
+  render();
+}
+
+function nextWrongReview() {
+  state.wrongReviewIdx++;
+  if(state.wrongReviewIdx >= state.wrongReviewList.length) { render(); return; }
+  state.fb = null; state.hint = false; state.ans = '';
+  const item = state.wrongReviewList[state.wrongReviewIdx];
+  state.prob = { q:item.q, a:item.ca, h:item.h };
+  render();
+}
+
+// ── 오답노트 인쇄 ──
+function printWrongNotes() {
+  state.view = 'wrongNote';
+  render();
+  setTimeout(() => window.print(), 300);
+}
+
+function renderWrongNote() {
+  const notes = data.wrongNotes || [];
+  const grouped = {};
+  notes.forEach(n => { if(!grouped[n.mod]) grouped[n.mod]=[]; grouped[n.mod].push(n); });
+
+  let h = `<div class="card">
+    <div class="print-only" style="margin-bottom:16px">
+      <h1 style="font-size:22px;font-weight:900;margin-bottom:4px">📝 오답노트 - 오성 연산 마스터</h1>
+      <div style="font-size:13px;color:#666">학생: ${data.name} | 인쇄일: ${new Date().toLocaleDateString('ko-KR')} | 총 ${notes.length}문제</div>
+    </div>
+    <div class="no-print flex justify-between items-center mb-16">
+      <h2 style="font-size:18px;font-weight:800;margin:0">🖨️ 오답노트 인쇄 미리보기</h2>
+      <div class="flex gap-8">
+        <button class="btn btn-gray btn-sm" onclick="go('wrong')">← 뒤로</button>
+        <button class="btn btn-orange btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+      </div>
+    </div>`;
+
+  Object.keys(grouped).forEach(modId => {
+    const m = MODULES.find(x=>x.id===modId);
+    const items = grouped[modId];
+    h += `<div style="margin-bottom:20px">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">${m?.icon} ${m?.name} (${items.length}문제)</div>`;
+    items.forEach((n, i) => {
+      h += `<div class="wrong-note-item">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">${i+1}. ${n.q}${n.q.includes('?')?'':' = ?'}</div>
+        <div style="font-size:12px;margin-bottom:2px"><span style="color:var(--accent2)">오답: ${n.ua}</span> → <span style="color:var(--green);font-weight:700">정답: ${n.ca}</span></div>
+        <div style="font-size:11px;color:var(--gold)">💡 ${n.h}</div>
+        <div style="font-size:10px;color:var(--sub);margin-top:2px">${n.date} · 단계 ${n.lv}</div>
+      </div>`;
+    });
+    h += `</div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+// ── 프로필 ──
+function renderProfile(lv, acc) {
+  let h = `<div class="card text-center">
+    <div style="width:72px;height:72px;border-radius:18px;margin:0 auto 14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900">${data.name[0]}</div>
+    <h2 style="font-size:22px;font-weight:900;margin:0 0 8px">${data.name}</h2>
+    <div class="flex gap-12" style="justify-content:center">
+      <div><div style="font-size:18px;font-weight:800">${lv.level}</div><div class="stat-label">레벨</div></div>
+      <div style="width:1px;background:var(--border)"></div>
+      <div><div style="font-size:18px;font-weight:800">${data.xp}</div><div class="stat-label">XP</div></div>
+      <div style="width:1px;background:var(--border)"></div>
+      <div><div style="font-size:18px;font-weight:800">${acc}%</div><div class="stat-label">정확도</div></div>
+    </div>
+  </div>`;
+
+  // 인쇄
+  h += `<button class="btn btn-orange btn-sm btn-full mb-12 no-print" onclick="printProfile()">🖨️ 학습 리포트 인쇄</button>`;
+
+  // 뱃지
+  h += `<div class="card"><div style="font-size:15px;font-weight:800;margin-bottom:14px">🏅 뱃지 (${data.badges.length}/${BADGES.length})</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">`;
+  BADGES.forEach(b => {
+    const has = data.badges.includes(b.id);
+    h += `<div style="padding:12px;border-radius:12px;text-align:center;background:${has?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.015)'};border:1px solid ${has?'rgba(255,217,61,0.3)':'var(--border)'};opacity:${has?1:0.35}">
+      <div style="font-size:28px;${has?'':'filter:grayscale(1)'}">${b.icon}</div>
+      <div style="font-size:11px;font-weight:700;margin-top:2px">${b.name}</div>
+      <div style="font-size:9px;color:var(--sub)">${b.desc}</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  // 모듈별 진도
+  h += `<div class="card"><div style="font-size:15px;font-weight:800;margin-bottom:14px">📈 모듈별 진도</div>`;
+  MODULES.forEach(m => {
+    const s=data.modSolved[m.id]||0, c=data.modCorrect[m.id]||0, a=s>0?Math.round(c/s*100):0;
+    h += `<div style="margin-bottom:14px">
+      <div class="flex justify-between mb-4"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;color:var(--sub)">${s}문제 · ${a}%</span></div>
+      <div class="pbar"><div class="pfill" style="width:${Math.min(s/50*100,100)}%;background:linear-gradient(90deg,${m.color},${m.color}99)"></div></div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('모든 데이터를 초기화할까요?')){localStorage.removeItem('calc_master_v3');location.reload()}">🗑️ 초기화</button>`;
+  return h;
+}
+
+function printProfile() { window.print(); }
+
+// ── 랭킹 ──
+function renderRank(lv) {
+  const board = [
+    {n:data.name,xp:data.xp,lv:lv.level,me:true},
+    {n:'수학왕 민준',xp:2450,lv:8},{n:'연산퀸 서연',xp:2100,lv:7},
+    {n:'분수달인 지호',xp:1800,lv:6},{n:'소수마스터 하은',xp:1500,lv:5},
+    {n:'정수킹 도윤',xp:1200,lv:4},{n:'열공 유진',xp:900,lv:3},
+  ].sort((a,b)=>b.xp-a.xp);
+
+  let h = `<div class="card"><h2 style="font-size:18px;font-weight:800;text-align:center;margin-bottom:16px">🏆 오성 연산 마스터 랭킹</h2>`;
+  board.forEach((e,i) => {
+    const colors = ['var(--gold)','#C0C0C0','#CD7F32'];
+    h += `<div class="flex items-center gap-10" style="padding:10px 14px;border-radius:12px;margin-bottom:6px;background:${e.me?'rgba(108,99,255,0.07)':'rgba(255,255,255,0.02)'};border:${e.me?'1px solid rgba(108,99,255,0.2)':'1px solid transparent'}">
+      <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;background:${i<3?colors[i]+'22':'rgba(255,255,255,0.04)'};color:${i<3?colors[i]:'var(--sub)'}">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
+      <div style="flex:1"><span style="font-weight:${e.me?800:600};font-size:13px">${e.n}</span>${e.me?'<span style="font-size:10px;color:var(--accent);margin-left:6px">(나)</span>':''}</div>
+      <span style="font-size:10px;color:var(--sub)">Lv.${e.lv}</span>
+      <span style="font-weight:800;color:var(--gold);font-size:13px">⚡${e.xp.toLocaleString()}</span>
+    </div>`;
+  });
+  h += `<div class="text-center mt-8" style="font-size:11px;color:#444">* 데모 데이터 · Flask 백엔드 연동 시 실시간 반영</div></div>`;
+  return h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 🔐 관리자 모드
+// ═══════════════════════════════════════════════════════════
+function renderAdmin() {
+  if(state.isAdmin) return renderAdminDash();
+
+  return `<div class="card text-center" style="padding:36px">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:16px">관리자 로그인</h2>
+    <p style="color:var(--sub);font-size:13px;margin-bottom:20px">교사용 대시보드에 접근하려면 비밀번호를 입력하세요.</p>
+    <input class="input input-sm mb-12" id="admin-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
+      onkeydown="if(event.key==='Enter')adminLogin()">
+    <button class="btn btn-full" onclick="adminLogin()">🔑 로그인</button>
+    <div id="admin-error" style="color:var(--accent2);font-size:12px;margin-top:8px"></div>
+  </div>`;
+}
+
+function adminLogin() {
+  const pw = ($('#admin-pw')||{}).value;
+  if(pw === ADMIN_PW) {
+    state.isAdmin = true;
+    go('admin');
+  } else {
+    const el = $('#admin-error');
+    if(el) el.textContent = '❌ 비밀번호가 틀렸습니다.';
+  }
+}
+
+function renderAdminDash() {
+  // 데모 학생 데이터 + 현재 사용자
+  const demoStudents = [
+    {name:'김민준',lv:8,xp:2450,total:156,correct:136,streak:12,acc:87,mods:{natural:45,factor:20,fraction:38,decimal:22,mixed:10,integer:12,rational:5,power:4},wrongs:8,lastDate:'2026-03-26'},
+    {name:'이서연',lv:7,xp:2100,total:134,correct:110,streak:8,acc:82,mods:{natural:40,factor:15,fraction:35,decimal:18,mixed:8,integer:10,rational:5,power:3},wrongs:12,lastDate:'2026-03-25'},
+    {name:'박지호',lv:6,xp:1800,total:112,correct:87,streak:5,acc:78,mods:{natural:35,factor:12,fraction:32,decimal:15,mixed:6,integer:8,rational:3,power:1},wrongs:18,lastDate:'2026-03-26'},
+    {name:'최하은',lv:5,xp:1500,total:98,correct:73,streak:3,acc:74,mods:{natural:30,factor:10,fraction:28,decimal:12,mixed:5,integer:8,rational:3,power:2},wrongs:15,lastDate:'2026-03-24'},
+    {name:'정도윤',lv:4,xp:1200,total:76,correct:53,streak:2,acc:70,mods:{natural:25,factor:8,fraction:20,decimal:10,mixed:4,integer:5,rational:2,power:2},wrongs:20,lastDate:'2026-03-23'},
+    {name:'강유진',lv:3,xp:900,total:54,correct:35,streak:1,acc:65,mods:{natural:18,factor:6,fraction:15,decimal:8,mixed:3,integer:3,rational:1,power:0},wrongs:14,lastDate:'2026-03-22'},
+  ];
+
+  // 현재 사용자 추가
+  const curAcc = data.total>0?Math.round(data.correct/data.total*100):0;
+  const allStudents = [{
+    name:data.name+'(현재)',lv:getLv(data.xp).level,xp:data.xp,total:data.total,correct:data.correct,
+    streak:data.streak,acc:curAcc,mods:data.modSolved,wrongs:data.wrongNotes.length,lastDate:data.lastDate||'-',isCurrent:true
+  }, ...demoStudents];
+
+  const avgAcc = Math.round(allStudents.reduce((s,st)=>s+st.acc,0)/allStudents.length);
+  const totalSolved = allStudents.reduce((s,st)=>s+st.total,0);
+  const activeCount = allStudents.filter(s=>s.streak>=1).length;
+
+  let h = `<div class="card">
+    <div class="flex justify-between items-center">
+      <div>
+        <h2 style="font-size:20px;font-weight:900;margin:0">👨‍🏫 관리자 대시보드</h2>
+        <p style="color:var(--sub);font-size:12px">오성중학교 수학 기초학력 향상 프로그램</p>
+      </div>
+      <div class="flex gap-8 no-print">
+        <button class="btn btn-orange btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+        <button class="btn btn-gray btn-sm" onclick="state.isAdmin=false;go('home')">로그아웃</button>
+      </div>
+    </div>
+    <div class="print-only mt-8" style="font-size:12px;color:#666">출력일: ${new Date().toLocaleDateString('ko-KR')}</div>
+  </div>`;
+
+  // 요약
+  h += `<div class="grid grid-4 mb-16">
+    ${[{l:'등록 학생',v:allStudents.length+'명',c:'var(--accent)',i:'👨‍🎓'},
+       {l:'총 풀이 수',v:totalSolved,c:'var(--green)',i:'✏️'},
+       {l:'평균 정확도',v:avgAcc+'%',c:'var(--orange)',i:'🎯'},
+       {l:'활성 학습자',v:activeCount+'명',c:'var(--gold)',i:'🔥'}
+    ].map(c=>`<div class="card text-center" style="padding:16px">
+      <div style="font-size:28px">${c.i}</div>
+      <div style="font-size:22px;font-weight:900;color:${c.c}">${c.v}</div>
+      <div style="font-size:11px;color:var(--sub)">${c.l}</div>
+    </div>`).join('')}</div>`;
+
+  // 학생 테이블
+  h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📋 학생별 현황</h3>
+    <div style="overflow-x:auto"><table class="admin-table"><thead><tr>
+      ${['이름','레벨','XP','풀이 수','정답률','연속일','오답 수','최근 학습','상태'].map(x=>`<th>${x}</th>`).join('')}
+    </tr></thead><tbody>`;
+
+  allStudents.forEach(st => {
+    const status = st.streak>=3?{t:'활발',c:'var(--green)'}:st.streak>=1?{t:'보통',c:'var(--gold)'}:{t:'미참여',c:'var(--accent2)'};
+    h += `<tr${st.isCurrent?' style="background:rgba(108,99,255,0.05)"':''}>
+      <td style="font-weight:700">${st.name}</td>
+      <td><span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${st.lv}</span></td>
+      <td style="color:var(--gold)">⚡${st.xp}</td>
+      <td>${st.total}</td>
+      <td style="color:${st.acc>=80?'var(--green)':st.acc>=60?'var(--gold)':'var(--accent2)'}">${st.acc}%</td>
+      <td>🔥${st.streak}일</td>
+      <td style="color:var(--accent2)">${st.wrongs}</td>
+      <td style="font-size:10px;color:var(--sub)">${st.lastDate}</td>
+      <td><span class="tag" style="background:${status.c}22;color:${status.c}">${status.t}</span></td>
+    </tr>`;
+  });
+  h += `</tbody></table></div></div>`;
+
+  // 모듈별 분석
+  h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📊 모듈별 참여 현황</h3>`;
+  MODULES.forEach(m => {
+    const total = allStudents.reduce((s,st)=>s+(st.mods[m.id]||0),0);
+    const max = allStudents.length * 50;
+    h += `<div style="margin-bottom:12px">
+      <div class="flex justify-between mb-4"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;color:var(--sub)">총 ${total}문제</span></div>
+      <div class="pbar" style="height:12px;border-radius:6px"><div class="pfill" style="width:${total/max*100}%;background:linear-gradient(90deg,${m.color},${m.color}88);border-radius:6px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700">${total>0?total:''}</div></div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // AI 추천
+  const weakStudents = allStudents.filter(s=>s.acc<70&&s.total>=10).sort((a,b)=>a.acc-b.acc);
+  const lowMods = MODULES.map(m=>({...m, total:allStudents.reduce((s,st)=>s+(st.mods[m.id]||0),0)})).sort((a,b)=>a.total-b.total);
+
+  h += `<div class="card" style="background:rgba(108,99,255,0.04);border:1px solid rgba(108,99,255,0.15)">
+    <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)">💡 AI 분석 & 추천</h3>
+    <div style="font-size:13px;color:var(--sub);line-height:1.8">`;
+  if(weakStudents.length>0) h += `• <strong style="color:var(--accent2)">${weakStudents.map(s=>s.name).join(', ')}</strong> 학생의 정확도가 70% 미만입니다. 기초 연산부터 집중 보충이 필요합니다.<br>`;
+  h += `• 참여율이 가장 낮은 모듈: <strong style="color:${lowMods[0].color}">${lowMods[0].name}</strong> (${lowMods[0].total}문제). 수업 시간 활용을 권장합니다.<br>`;
+  const highStreaks = allStudents.filter(s=>s.streak>=5);
+  if(highStreaks.length>0) h += `• <strong style="color:var(--green)">${highStreaks.map(s=>s.name).join(', ')}</strong>의 연속 학습이 우수합니다. 도전 과제를 통해 동기를 유지하세요.<br>`;
+  const manyWrongs = allStudents.filter(s=>s.wrongs>=15).sort((a,b)=>b.wrongs-a.wrongs);
+  if(manyWrongs.length>0) h += `• <strong style="color:var(--orange)">${manyWrongs.map(s=>s.name).join(', ')}</strong>의 오답이 많습니다. 개별 오답노트 확인 후 면담을 권장합니다.<br>`;
+  h += `</div></div>`;
+
+  // 성취도 분포
+  h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📈 정확도 분포</h3>
+    <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:6px">`;
+  const ranges = [{l:'90%↑',min:90,c:'var(--green)'},{l:'80~89%',min:80,c:'var(--accent)'},{l:'70~79%',min:70,c:'var(--gold)'},{l:'60~69%',min:60,c:'var(--orange)'},{l:'60%↓',min:0,c:'var(--accent2)'}];
+  ranges.forEach((r,i) => {
+    const max = i===0?101:ranges[i-1].min;
+    const cnt = allStudents.filter(s=>s.acc>=r.min&&s.acc<max).length;
+    h += `<div class="text-center" style="padding:10px;background:${r.c}11;border-radius:10px;border:1px solid ${r.c}33">
+      <div style="font-size:20px;font-weight:800;color:${r.c}">${cnt}</div>
+      <div style="font-size:10px;color:var(--sub)">${r.l}</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  return h;
+}
+
+// ── 초기화 ──
+function init() {
+  if(!loadData()) {
+    renderNameInput();
+    return;
+  }
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
