@@ -175,6 +175,53 @@ body {
   .pbar { background: #ddd !important; }
 }
 .print-only { display: none; }
+
+/* 손글씨 캔버스 */
+.canvas-wrap {
+  position: relative; border-radius: 14px; overflow: hidden;
+  border: 2px solid var(--border); background: rgba(255,255,255,0.06);
+  margin-bottom: 12px; transition: border-color 0.3s;
+}
+.canvas-wrap.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.12); }
+.draw-canvas {
+  display: block; width: 100%; touch-action: none;
+  cursor: crosshair; background: transparent;
+}
+.canvas-toolbar {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+  background: rgba(255,255,255,0.03); border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.pen-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 2px solid transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; background: rgba(255,255,255,0.06); color: var(--text);
+  font-family: inherit; transition: all 0.15s;
+}
+.pen-btn:hover { background: rgba(255,255,255,0.12); }
+.pen-btn.active { border-color: var(--accent); background: rgba(108,99,255,0.15); }
+.pen-size {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--text);
+}
+.pen-size.sz-1 { width: 6px; height: 6px; }
+.pen-size.sz-3 { width: 12px; height: 12px; }
+.pen-size.sz-5 { width: 16px; height: 16px; }
+.input-mode-toggle {
+  display: flex; background: rgba(255,255,255,0.04); border-radius: 10px;
+  padding: 2px; border: 1px solid var(--border); margin-bottom: 12px;
+}
+.mode-btn {
+  flex: 1; padding: 8px 12px; border: none; border-radius: 8px; cursor: pointer;
+  font-size: 12px; font-weight: 600; background: transparent; color: var(--sub);
+  font-family: inherit; transition: all 0.2s;
+}
+.mode-btn.active {
+  background: rgba(108,99,255,0.2); color: var(--accent); font-weight: 700;
+}
+.canvas-grid {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; opacity: 0.08;
+}
 </style>
 </head>
 <body>
@@ -304,6 +351,9 @@ let state = {
   quiz: { cur:0, tot:10, ok:0, results:[] },
   timerMode: false, timerSec: 30, timerLeft: 30, timerInterval: null,
   isAdmin: false,
+  inputMode: 'keyboard', // 'keyboard' or 'handwrite'
+  penSize: 3, penColor: '#ffffff', isEraser: false,
+  canvasHistory: [],
 };
 
 const initData = () => ({
@@ -389,9 +439,13 @@ function render() {
   app.innerHTML = html;
 
   // 퀴즈 입력 포커스
-  if(state.view==='quiz') {
+  if(state.view==='quiz' || state.view==='wrongReview') {
     const inp = $('#quiz-input');
     if(inp && !state.fb) setTimeout(()=>inp.focus(), 50);
+    // 캔버스 초기화
+    if(state.inputMode==='handwrite' && !state.fb) {
+      setTimeout(()=>initCanvas(), 60);
+    }
   }
 }
 
@@ -539,6 +593,7 @@ function renderModule() {
 function startQuiz() {
   state.quiz = { cur:0, tot:10, ok:0, results:[] };
   state.fb = null; state.hint = false; state.ans = '';
+  state.canvasHistory = [];
   state.prob = genProblem(state.curMod, state.level);
   state.timerLeft = state.timerSec;
   state.view = 'quiz';
@@ -600,10 +655,47 @@ function renderQuiz() {
     h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
   }
 
-  h += `<input class="input mb-12" id="quiz-input" placeholder="정답 입력 (예: 3/4, -5, 12.5)"
+  // 입력 모드 토글
+  if(!state.fb) {
+    h += `<div class="input-mode-toggle">
+      <button class="mode-btn ${state.inputMode==='keyboard'?'active':''}" onclick="switchInputMode('keyboard')">⌨️ 키보드 입력</button>
+      <button class="mode-btn ${state.inputMode==='handwrite'?'active':''}" onclick="switchInputMode('handwrite')">✏️ 손글씨 풀이</button>
+    </div>`;
+  }
+
+  // 손글씨 캔버스
+  if(state.inputMode==='handwrite') {
+    h += `<div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="draw-canvas" class="draw-canvas" width="800" height="280"></canvas>
+      <svg class="canvas-grid" width="100%" height="100%">
+        <defs><pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+          <path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5"/>
+        </pattern></defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+      </svg>
+      <div class="canvas-toolbar">
+        <button class="pen-btn ${!state.isEraser&&state.penSize===2?'active':''}" onclick="setPen(2,false)" title="가는 펜"><div class="pen-size sz-1"></div></button>
+        <button class="pen-btn ${!state.isEraser&&state.penSize===4?'active':''}" onclick="setPen(4,false)" title="보통 펜"><div class="pen-size sz-3"></div></button>
+        <button class="pen-btn ${!state.isEraser&&state.penSize===6?'active':''}" onclick="setPen(6,false)" title="굵은 펜"><div class="pen-size sz-5"></div></button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <button class="pen-btn ${state.penColor==='#ffffff'&&!state.isEraser?'active':''}" onclick="setPenColor('#ffffff')" title="흰색"><div style="width:12px;height:12px;border-radius:50%;background:#fff"></div></button>
+        <button class="pen-btn ${state.penColor==='#FFD93D'&&!state.isEraser?'active':''}" onclick="setPenColor('#FFD93D')" title="노란색"><div style="width:12px;height:12px;border-radius:50%;background:#FFD93D"></div></button>
+        <button class="pen-btn ${state.penColor==='#2ED573'&&!state.isEraser?'active':''}" onclick="setPenColor('#2ED573')" title="초록색"><div style="width:12px;height:12px;border-radius:50%;background:#2ED573"></div></button>
+        <button class="pen-btn ${state.penColor==='#FF6B6B'&&!state.isEraser?'active':''}" onclick="setPenColor('#FF6B6B')" title="빨간색"><div style="width:12px;height:12px;border-radius:50%;background:#FF6B6B"></div></button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <button class="pen-btn ${state.isEraser?'active':''}" onclick="toggleEraser()" title="지우개">🧹</button>
+        <button class="pen-btn" onclick="undoCanvas()" title="되돌리기">↩️</button>
+        <button class="pen-btn" onclick="clearCanvas()" title="전체 지우기">🗑️</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px;text-align:center">✏️ 위 칸에 풀이 과정을 쓰고, 아래에 최종 답을 입력하세요</div>`;
+  }
+
+  h += `<input class="input ${state.inputMode==='handwrite'?'input-sm':''} mb-12" id="quiz-input" placeholder="${state.inputMode==='handwrite'?'최종 정답 입력':'정답 입력 (예: 3/4, -5, 12.5)'}"
     value="${state.ans}" oninput="state.ans=this.value"
     onkeydown="if(event.key==='Enter'){state.fb?nextProblem():submitAnswer()}"
-    ${state.fb?'disabled':''}>`;
+    ${state.fb?'disabled':''}
+    style="${state.inputMode==='handwrite'?'font-size:16px;':''}">`;
 
   if(state.fb) {
     h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
@@ -692,6 +784,7 @@ function nextProblem() {
     return;
   }
   state.fb = null; state.hint = false; state.ans = '';
+  state.canvasHistory = [];
   state.prob = genProblem(state.curMod, state.level);
   state.timerLeft = state.timerSec;
   render();
@@ -813,13 +906,13 @@ function renderWrong() {
 function startWrongReview() {
   const notes = data.wrongNotes || [];
   if(notes.length === 0) return;
-  // 랜덤 10개 선택
   const shuffled = [...notes].sort(() => Math.random()-0.5);
   state.wrongReviewList = shuffled.slice(0, Math.min(10, shuffled.length));
   state.wrongReviewIdx = 0;
   state.wrongReviewOk = 0;
   state.wrongReviewResults = [];
   state.fb = null; state.hint = false; state.ans = '';
+  state.canvasHistory = [];
   state.prob = { q: state.wrongReviewList[0].q, a: state.wrongReviewList[0].ca, h: state.wrongReviewList[0].h };
   go('wrongReview');
 }
@@ -883,10 +976,41 @@ function renderWrongReview() {
     h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
   }
 
-  h += `<input class="input mb-12" id="quiz-input" placeholder="정답 입력"
+  // 입력 모드 토글 (오답 복습)
+  if(!state.fb) {
+    h += `<div class="input-mode-toggle">
+      <button class="mode-btn ${state.inputMode==='keyboard'?'active':''}" onclick="switchInputMode('keyboard')">⌨️ 키보드 입력</button>
+      <button class="mode-btn ${state.inputMode==='handwrite'?'active':''}" onclick="switchInputMode('handwrite')">✏️ 손글씨 풀이</button>
+    </div>`;
+  }
+
+  if(state.inputMode==='handwrite') {
+    h += `<div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="draw-canvas" class="draw-canvas" width="800" height="280"></canvas>
+      <svg class="canvas-grid" width="100%" height="100%"><defs><pattern id="grid2" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M 30 0 L 0 0 0 30" fill="none" stroke="white" stroke-width="0.5"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid2)"/></svg>
+      <div class="canvas-toolbar">
+        <button class="pen-btn ${!state.isEraser&&state.penSize===2?'active':''}" onclick="setPen(2,false)"><div class="pen-size sz-1"></div></button>
+        <button class="pen-btn ${!state.isEraser&&state.penSize===4?'active':''}" onclick="setPen(4,false)"><div class="pen-size sz-3"></div></button>
+        <button class="pen-btn ${!state.isEraser&&state.penSize===6?'active':''}" onclick="setPen(6,false)"><div class="pen-size sz-5"></div></button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <button class="pen-btn ${state.penColor==='#ffffff'&&!state.isEraser?'active':''}" onclick="setPenColor('#ffffff')"><div style="width:12px;height:12px;border-radius:50%;background:#fff"></div></button>
+        <button class="pen-btn ${state.penColor==='#FFD93D'&&!state.isEraser?'active':''}" onclick="setPenColor('#FFD93D')"><div style="width:12px;height:12px;border-radius:50%;background:#FFD93D"></div></button>
+        <button class="pen-btn ${state.penColor==='#2ED573'&&!state.isEraser?'active':''}" onclick="setPenColor('#2ED573')"><div style="width:12px;height:12px;border-radius:50%;background:#2ED573"></div></button>
+        <button class="pen-btn ${state.penColor==='#FF6B6B'&&!state.isEraser?'active':''}" onclick="setPenColor('#FF6B6B')"><div style="width:12px;height:12px;border-radius:50%;background:#FF6B6B"></div></button>
+        <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+        <button class="pen-btn ${state.isEraser?'active':''}" onclick="toggleEraser()">🧹</button>
+        <button class="pen-btn" onclick="undoCanvas()">↩️</button>
+        <button class="pen-btn" onclick="clearCanvas()">🗑️</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--sub);margin-bottom:8px;text-align:center">✏️ 풀이 과정을 쓰고, 아래에 최종 답을 입력하세요</div>`;
+  }
+
+  h += `<input class="input ${state.inputMode==='handwrite'?'input-sm':''} mb-12" id="quiz-input" placeholder="${state.inputMode==='handwrite'?'최종 정답 입력':'정답 입력'}"
     value="${state.ans}" oninput="state.ans=this.value"
     onkeydown="if(event.key==='Enter'){state.fb?nextWrongReview():submitWrongReview()}"
-    ${state.fb?'disabled':''}>`;
+    ${state.fb?'disabled':''}
+    style="${state.inputMode==='handwrite'?'font-size:16px;':''}">`;
 
   if(state.fb) {
     h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
@@ -918,6 +1042,7 @@ function nextWrongReview() {
   state.wrongReviewIdx++;
   if(state.wrongReviewIdx >= state.wrongReviewList.length) { render(); return; }
   state.fb = null; state.hint = false; state.ans = '';
+  state.canvasHistory = [];
   const item = state.wrongReviewList[state.wrongReviewIdx];
   state.prob = { q:item.q, a:item.ca, h:item.h };
   render();
@@ -1177,6 +1302,168 @@ function renderAdminDash() {
   h += `</div></div>`;
 
   return h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ✏️ 손글씨 캔버스 (터치 + 마우스 지원)
+// ═══════════════════════════════════════════════════════════
+let drawCtx = null;
+let isDrawing = false;
+let lastX = 0, lastY = 0;
+
+function initCanvas() {
+  const canvas = $('#draw-canvas');
+  if(!canvas) return;
+  drawCtx = canvas.getContext('2d');
+
+  // 캔버스 해상도를 실제 크기에 맞춤
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.height = '280px';
+  drawCtx.scale(dpr, dpr);
+
+  // 부드러운 선
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+
+  // 이전 그림 복원
+  restoreCanvas();
+
+  // 이벤트 등록
+  canvas.onmousedown = e => startDraw(e, false);
+  canvas.onmousemove = e => doDraw(e, false);
+  canvas.onmouseup = stopDraw;
+  canvas.onmouseleave = stopDraw;
+
+  canvas.ontouchstart = e => { e.preventDefault(); startDraw(e, true); };
+  canvas.ontouchmove = e => { e.preventDefault(); doDraw(e, true); };
+  canvas.ontouchend = stopDraw;
+  canvas.ontouchcancel = stopDraw;
+}
+
+function getPos(e, isTouch) {
+  const canvas = $('#draw-canvas');
+  if(!canvas) return {x:0,y:0};
+  const rect = canvas.getBoundingClientRect();
+  if(isTouch) {
+    const t = e.touches[0];
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function startDraw(e, isTouch) {
+  isDrawing = true;
+  const pos = getPos(e, isTouch);
+  lastX = pos.x;
+  lastY = pos.y;
+
+  // 히스토리 저장
+  saveCanvasState();
+
+  // 캔버스 활성화 표시
+  const wrap = $('#canvas-wrap');
+  if(wrap) wrap.classList.add('active');
+}
+
+function doDraw(e, isTouch) {
+  if(!isDrawing || !drawCtx) return;
+  const pos = getPos(e, isTouch);
+
+  drawCtx.beginPath();
+  if(state.isEraser) {
+    drawCtx.globalCompositeOperation = 'destination-out';
+    drawCtx.lineWidth = state.penSize * 5;
+  } else {
+    drawCtx.globalCompositeOperation = 'source-over';
+    drawCtx.strokeStyle = state.penColor;
+    drawCtx.lineWidth = state.penSize;
+  }
+  drawCtx.moveTo(lastX, lastY);
+  drawCtx.lineTo(pos.x, pos.y);
+  drawCtx.stroke();
+
+  lastX = pos.x;
+  lastY = pos.y;
+}
+
+function stopDraw() {
+  isDrawing = false;
+  const wrap = $('#canvas-wrap');
+  if(wrap) wrap.classList.remove('active');
+}
+
+function switchInputMode(mode) {
+  state.inputMode = mode;
+  state.canvasHistory = [];
+  render();
+}
+
+function setPen(size, eraser) {
+  state.penSize = size;
+  state.isEraser = false;
+  render();
+}
+
+function setPenColor(color) {
+  state.penColor = color;
+  state.isEraser = false;
+  render();
+}
+
+function toggleEraser() {
+  state.isEraser = !state.isEraser;
+  render();
+}
+
+function saveCanvasState() {
+  const canvas = $('#draw-canvas');
+  if(!canvas) return;
+  state.canvasHistory.push(canvas.toDataURL());
+  if(state.canvasHistory.length > 30) state.canvasHistory.shift();
+}
+
+function restoreCanvas() {
+  if(state.canvasHistory.length === 0 || !drawCtx) return;
+  const last = state.canvasHistory[state.canvasHistory.length - 1];
+  const img = new Image();
+  img.onload = () => {
+    const canvas = $('#draw-canvas');
+    if(!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    drawCtx.clearRect(0, 0, rect.width, rect.height);
+    drawCtx.drawImage(img, 0, 0, rect.width, rect.height);
+  };
+  img.src = last;
+}
+
+function undoCanvas() {
+  if(state.canvasHistory.length > 0) {
+    state.canvasHistory.pop();
+  }
+  const canvas = $('#draw-canvas');
+  if(!canvas || !drawCtx) return;
+  const rect = canvas.getBoundingClientRect();
+  drawCtx.clearRect(0, 0, rect.width, rect.height);
+  if(state.canvasHistory.length > 0) {
+    const last = state.canvasHistory[state.canvasHistory.length - 1];
+    const img = new Image();
+    img.onload = () => {
+      drawCtx.drawImage(img, 0, 0, rect.width, rect.height);
+    };
+    img.src = last;
+  }
+}
+
+function clearCanvas() {
+  const canvas = $('#draw-canvas');
+  if(!canvas || !drawCtx) return;
+  const rect = canvas.getBoundingClientRect();
+  saveCanvasState();
+  drawCtx.clearRect(0, 0, rect.width, rect.height);
+  state.canvasHistory = [];
 }
 
 // ── 초기화 ──
