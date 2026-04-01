@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>오성 연산 마스터 v3.0 - 오성중학교 기초 연산 집중 학습</title>
+<title>오성 연산 마스터 v3.1 - 오성중학교 기초 연산 집중 학습</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
 :root {
@@ -222,6 +222,19 @@ body {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none; opacity: 0.08;
 }
+
+/* 분수 시각 표기 */
+.mf {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; margin: 0 3px; position: relative;
+  font-size: 0.85em; line-height: 1.1;
+}
+.mf .fn { border-bottom: 1.5px solid currentColor; padding: 0 4px 2px; min-width: 16px; text-align: center; }
+.mf .fd { padding: 2px 4px 0; min-width: 16px; text-align: center; }
+.mf-neg { margin-right: 1px; }
+.mf-paren { vertical-align: middle; font-size: 1.1em; }
+.question-box .mf { font-size: 0.7em; }
+.question-box { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; }
 </style>
 </head>
 <body>
@@ -230,7 +243,7 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// 🔢 오성 연산 마스터 v3.0 — GitHub Pages 배포용
+// 🔢 오성 연산 마스터 v3.1 — GitHub Pages 배포용
 // ═══════════════════════════════════════════════════════════════
 
 // ── 유틸리티 ──
@@ -243,6 +256,34 @@ const lcm = (a,b) => Math.abs(a*b)/gcd(a,b);
 const simplify = (n,d) => { if(d===0) return [n,1]; const s=d<0?-1:1; const g=gcd(Math.abs(n),Math.abs(d)); return [s*n/g, s*d/g]; };
 const fmtFrac = (n,d) => { if(d===1) return `${n}`; if(n===0) return "0"; return `${n}/${d}`; };
 
+// ── 분수 시각화 렌더링 ──
+function mathDisplay(expr) {
+  let s = expr;
+  // 대분수: 1과2/3
+  s = s.replace(/(\d+)과\s*(\d+)\/(\d+)/g, function(_,w,n,d){
+    return w+'<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span>';
+  });
+  // 괄호 안 음수 분수: (-2/3)
+  s = s.replace(/\(−?\s*(\d+)\/(\d+)\)/g, function(m,n,d){
+    let isNeg = m.includes('−') || m.includes('-');
+    // check for minus sign
+    if(m.match(/\(-/)||m.match(/\(−/)) isNeg=true;
+    return '<span class="mf-paren">(</span>'+(isNeg?'<span class="mf-neg">−</span>':'')+'<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span><span class="mf-paren">)</span>';
+  });
+  s = s.replace(/\(\-(\d+)\/(\d+)\)/g, function(_,n,d){
+    return '<span class="mf-paren">(</span><span class="mf-neg">−</span><span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span><span class="mf-paren">)</span>';
+  });
+  // 독립 음수 분수 (맨 앞): -2/3
+  s = s.replace(/(^|[=\s])-(\d+)\/(\d+)/g, function(_,pre,n,d){
+    return pre+'−<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span>';
+  });
+  // 일반 분수: 2/3 (아직 변환 안 된 것)
+  s = s.replace(/(?<![<\w>])(\d+)\/(\d+)(?![<\w])/g, function(_,n,d){
+    return '<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span>';
+  });
+  return s;
+}
+
 // ── 모듈 정의 ──
 const MODULES = [
   { id:"natural", name:"자연수 사칙연산", icon:"🔢", color:"#FF6B35", grade:"초5~6", desc:"큰 수의 덧셈·뺄셈·곱셈·나눗셈", levels:["두 자리 수 연산","세 자리 수 연산","큰 수 곱셈·나눗셈","복합 연산","괄호가 있는 식"] },
@@ -250,8 +291,8 @@ const MODULES = [
   { id:"fraction", name:"분수의 연산", icon:"🍕", color:"#00B894", grade:"초5~6", desc:"진분수·대분수의 사칙연산", levels:["동분모 덧셈·뺄셈","이분모 덧셈·뺄셈","분수의 곱셈","분수의 나눗셈","대분수 혼합 연산"] },
   { id:"decimal", name:"소수의 연산", icon:"🔬", color:"#0984E3", grade:"초5~6", desc:"소수의 덧셈·뺄셈·곱셈·나눗셈", levels:["소수 한 자리 덧뺄","소수 두 자리 덧뺄","소수의 곱셈","소수의 나눗셈","소수↔분수 변환"] },
   { id:"mixed", name:"혼합 계산", icon:"⚡", color:"#6C5CE7", grade:"초5~중1", desc:"사칙연산 순서와 괄호 계산", levels:["연산 순서","괄호가 있는 식","여러 괄호","분수·소수 혼합","복잡한 혼합식"] },
-  { id:"integer", name:"정수의 연산", icon:"🌡️", color:"#FD79A8", grade:"중1", desc:"양수·음수·절댓값·정수 사칙연산", levels:["양수와 음수","절댓값","정수 덧셈·뺄셈","정수 곱셈·나눗셈","정수 혼합 연산"] },
-  { id:"rational", name:"유리수의 연산", icon:"🧪", color:"#00CEC9", grade:"중1", desc:"음의 분수·소수 포함 유리수 연산", levels:["유리수 대소비교","유리수 덧셈·뺄셈","유리수 곱셈","유리수 나눗셈","유리수 복합 연산"] },
+  { id:"integer", name:"정수의 연산", icon:"🌡️", color:"#FD79A8", grade:"중1", desc:"양수·음수·절댓값·정수 사칙연산", levels:["양수와 음수","절댓값","정수 덧뺄 (괄호 표기)","정수 덧뺄 (생략 표기)","정수 곱셈·나눗셈","정수 혼합 연산"] },
+  { id:"rational", name:"유리수의 연산", icon:"🧪", color:"#00CEC9", grade:"중1", desc:"음의 분수·소수 포함 유리수 연산", levels:["유리수 대소비교","유리수 덧뺄 (괄호 표기)","유리수 덧뺄 (생략 표기)","유리수 곱셈","유리수 나눗셈","유리수 복합 연산"] },
   { id:"power", name:"거듭제곱", icon:"💥", color:"#A29BFE", grade:"중1~2", desc:"거듭제곱과 지수법칙", levels:["거듭제곱 계산","밑이 음수","지수법칙 기초","지수법칙 응용","종합 문제"] },
 ];
 
@@ -318,19 +359,36 @@ function genProblem(mod, lv) {
   }
 
   if(mod==="integer") {
+    const fmtP = n => n>=0?`(+${n})`:`(${n})`; // 괄호 표기용
     if(lv===1){ const a=rand(-10,10),b=rand(-10,10); return{q:`${fmt(a)}와(과) ${fmt(b)} 중 더 큰 수는?`,a:String(Math.max(a,b)),h:"수직선 오른쪽이 더 큰 수"}; }
     if(lv===2){ const a=rand(-20,20); return{q:`|${a}| = ?`,a:String(Math.abs(a)),h:"0까지의 거리(항상 0 이상)"}; }
-    if(lv===3){ let a=rand(-15,15),b=rand(-15,15); if(a>=0&&b>=0) b=-rand(1,15); const op=pick(["+","-"]); return{q:`${fmt(a)} ${op} ${fmt(b)}`,a:String(op==="+"?a+b:a-b),h:op==="+"?"같은 부호→절댓값 더하기":"빼기→부호 바꿔 더하기"}; }
-    if(lv===4){ let a=rand(-12,12),b=rand(-12,12); while(b===0) b=rand(-12,-1); const op=pick(["×","÷"]); if(op==="×"){return{q:`${fmt(a)} × ${fmt(b)}`,a:String(a*b),h:"같은 부호→(+), 다른 부호→(-)"}} else{const ans=rand(-10,10);if(ans===0) return genProblem(mod,lv); const dv=ans*b; return{q:`${fmt(dv)} ÷ ${fmt(b)}`,a:String(ans),h:"나눗셈도 부호 규칙 동일!"}} }
-    if(lv===5){ const a=rand(-8,8),b=rand(-8,8),c=rand(2,5)*pick([1,-1]); if(pick([0,1])){return{q:`(${fmt(a)} + ${fmt(b)}) × ${fmt(c)}`,a:String((a+b)*c),h:"괄호 먼저 → 부호 규칙"}} else{return{q:`${fmt(a)} × ${fmt(b)} + ${fmt(c)}`,a:String(a*b+c),h:"곱셈 먼저 → 덧셈"}} }
+    if(lv===3){ // 정수 덧뺄 — 괄호 표기: (+3) + (-5)
+      let a=rand(-15,15),b=rand(-15,15); if(a>=0&&b>=0) b=-rand(1,15); const op=pick(["+","-"]); const ans=op==="+"?a+b:a-b; return{q:`${fmtP(a)} ${op} ${fmtP(b)}`,a:String(ans),h:op==="+"?"같은 부호→절댓값 더하기, 다른 부호→빼기":"빼기→뒤의 부호 바꿔서 더하기!"}; }
+    if(lv===4){ // 정수 덧뺄 — 생략 표기: -3 + 5, 7 - 12
+      let a=rand(-15,15),b=rand(-15,15); if(a>=0&&b>=0) b=-rand(1,15); const op=pick(["+","-"]); const ans=op==="+"?a+b:a-b;
+      let qs; if(b<0){qs=`${a} ${op} (${b})`} else{qs=`${a} ${op} ${b}`}
+      return{q:qs,a:String(ans),h:"부호를 잘 살펴서 계산하세요"}; }
+    if(lv===5){ let a=rand(-12,12),b=rand(-12,12); while(b===0) b=rand(-12,-1); const op=pick(["×","÷"]); if(op==="×"){return{q:`${fmt(a)} × ${fmt(b)}`,a:String(a*b),h:"같은 부호→(+), 다른 부호→(-)"}} else{const ans=rand(-10,10);if(ans===0) return genProblem(mod,lv); const dv=ans*b; return{q:`${fmt(dv)} ÷ ${fmt(b)}`,a:String(ans),h:"나눗셈도 부호 규칙 동일!"}} }
+    if(lv===6){ const a=rand(-8,8),b=rand(-8,8),c=rand(2,5)*pick([1,-1]); if(pick([0,1])){return{q:`(${fmt(a)} + ${fmt(b)}) × ${fmt(c)}`,a:String((a+b)*c),h:"괄호 먼저 → 부호 규칙"}} else{return{q:`${fmt(a)} × ${fmt(b)} + ${fmt(c)}`,a:String(a*b+c),h:"곱셈 먼저 → 덧셈"}} }
   }
 
   if(mod==="rational") {
-    if(lv===1){ const d=pick([3,4,5,6]); let n1=rand(-d+1,d-1),n2=rand(-d+1,d-1); while(n2===n1) n2=rand(-d+1,d-1); const bigger=n1/d>n2/d?fmtFrac(n1,d):fmtFrac(n2,d); return{q:`${fmtFrac(n1,d)}와 ${fmtFrac(n2,d)} 중 큰 수는?`,a:bigger,h:"분모 같으면 분자 큰 것"}; }
-    if(lv===2){ const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${fmtFrac(n1,d1)} ${op} ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"통분(공통분모:"+cd+") → 계산 → 약분"}; }
-    if(lv===3){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,5]); const[sn,sd]=simplify(n1*n2,d1*d2); return{q:`${fmtFrac(n1,d1)} × ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"분자끼리, 분모끼리 곱 + 부호!"}; }
-    if(lv===4){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,4,5]); const[sn,sd]=simplify(n1*d2,d1*n2); return{q:`${fmtFrac(n1,d1)} ÷ ${fmtFrac(n2,d2)}`,a:fmtFrac(sn,sd),h:"역수로 바꿔 곱하기 + 부호!"}; }
-    if(lv===5){ const n1=rand(1,3)*pick([1,-1]),d1=pick([2,3,4]),n2=rand(1,3)*pick([1,-1]),d2=pick([2,3,4]),n3=rand(1,4)*pick([1,-1]),d3=pick([2,3]); const cd=lcm(d1,d2),sumN=n1*(cd/d1)+n2*(cd/d2); const[sn,sd]=simplify(sumN*n3,cd*d3); return{q:`(${fmtFrac(n1,d1)} + ${fmtFrac(n2,d2)}) × ${fmtFrac(n3,d3)}`,a:fmtFrac(sn,sd),h:"괄호 통분 → 곱셈 → 약분!"}; }
+    // 유리수 분수 표기 (연산 중간 음수는 괄호 필수)
+    const fmtR = (n,d,isFirst) => {
+      if(d===1) return n<0?(isFirst?`${n}`:`(${n})`):String(n);
+      if(n<0 && !isFirst) return `(-${Math.abs(n)}/${d})`;
+      return `${n}/${d}`;
+    };
+    if(lv===1){ const d=pick([3,4,5,6]); let n1=rand(-d+1,d-1),n2=rand(-d+1,d-1); while(n2===n1) n2=rand(-d+1,d-1); const v1=n1/d,v2=n2/d; const bigger=v1>v2?fmtFrac(n1,d):fmtFrac(n2,d); return{q:`${fmtFrac(n1,d)}와 ${fmtFrac(n2,d)} 중 큰 수는?`,a:bigger,h:"분모 같으면 분자 큰 것"}; }
+    if(lv===2){ // 유리수 덧뺄 — 괄호 표기: 3/4 + (-3/5)
+      const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${fmtR(n1,d1,true)} ${op} ${fmtR(n2,d2,false)}`,a:fmtFrac(sn,sd),h:"통분(공통분모:"+cd+") → 계산 → 약분"}; }
+    if(lv===3){ // 유리수 덧뺄 — 생략 표기: -1/3 + 2/5
+      const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd);
+      let qs; if(n2<0){qs=`${fmtFrac(n1,d1)} ${op} (${fmtFrac(n2,d2)})`} else{qs=`${fmtFrac(n1,d1)} ${op} ${fmtFrac(n2,d2)}`}
+      return{q:qs,a:fmtFrac(sn,sd),h:"부호를 잘 살펴 통분 후 계산!"}; }
+    if(lv===4){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,5]); const[sn,sd]=simplify(n1*n2,d1*d2); return{q:`${fmtR(n1,d1,true)} × ${fmtR(n2,d2,false)}`,a:fmtFrac(sn,sd),h:"분자끼리, 분모끼리 곱 + 부호!"}; }
+    if(lv===5){ const n1=rand(1,5)*pick([1,-1]),d1=pick([2,3,4,5]),n2=rand(1,5)*pick([1,-1]),d2=pick([2,3,4,5]); const[sn,sd]=simplify(n1*d2,d1*n2); return{q:`${fmtR(n1,d1,true)} ÷ ${fmtR(n2,d2,false)}`,a:fmtFrac(sn,sd),h:"역수로 바꿔 곱하기 + 부호!"}; }
+    if(lv===6){ const n1=rand(1,3)*pick([1,-1]),d1=pick([2,3,4]),n2=rand(1,3)*pick([1,-1]),d2=pick([2,3,4]),n3=rand(1,4)*pick([1,-1]),d3=pick([2,3]); const cd=lcm(d1,d2),sumN=n1*(cd/d1)+n2*(cd/d2); const[sn,sd]=simplify(sumN*n3,cd*d3); return{q:`(${fmtR(n1,d1,true)} + ${fmtR(n2,d2,false)}) × ${fmtR(n3,d3,false)}`,a:fmtFrac(sn,sd),h:"괄호 통분 → 곱셈 → 약분!"}; }
   }
 
   if(mod==="power") {
@@ -403,7 +461,7 @@ function render() {
         <span style="font-size:26px">🔢</span>
         <div>
           <div style="font-size:17px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</div>
-          <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v3.0 · K.G.B</div>
+          <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v3.1 · K.G.B</div>
         </div>
       </div>
       ${state.view!=='quiz'?`<div class="flex items-center gap-8">
@@ -434,7 +492,7 @@ function render() {
   else if(state.view==='adminDash') html += renderAdminDash();
 
   html += `<div class="text-center no-print" style="padding:20px 0 12px;font-size:10px;color:#333">
-    오성 연산 마스터 v3.0 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
+    오성 연산 마스터 v3.1 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
 
   app.innerHTML = html;
 
@@ -649,7 +707,7 @@ function renderQuiz() {
     <span style="font-size:12px;color:var(--sub)">문제 ${state.quiz.cur+(state.fb?0:1)}</span>
     <span class="tag" style="background:${m.color}22;color:${m.color}">${'⭐'.repeat(state.level)}</span>
   </div>
-  <div class="question-box mb-20">${state.prob.q}${state.prob.q.includes('?')?'':' = ?'}</div>`;
+  <div class="question-box mb-20">${mathDisplay(state.prob.q)}${state.prob.q.includes('?')?'':' = ?'}</div>`;
 
   if(state.hint) {
     h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
@@ -700,7 +758,7 @@ function renderQuiz() {
   if(state.fb) {
     h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
       <div style="font-weight:800;font-size:16px">${state.fb.ok?'🎉 정답!':'😔 아쉬워요!'}</div>
-      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${state.prob.a}</span></div>`:''}
+      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${mathDisplay(state.prob.a)}</span></div>`:''}
       <div style="font-size:12px;color:var(--gold);margin-top:4px">+${state.fb.xp} XP</div>
     </div>`;
   }
@@ -816,7 +874,7 @@ function renderResult() {
     <div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 풀이 내역</div>`;
   state.quiz.results.forEach(r => {
     h += `<div class="review-item ${r.ok?'review-ok':'review-fail'}">
-      ${r.ok?'✅':'❌'} ${r.q} = ${r.ok?r.ca:`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${r.ca}</span>`}
+      ${r.ok?'✅':'❌'} ${mathDisplay(r.q)} = ${r.ok?mathDisplay(r.ca):`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${mathDisplay(r.ca)}</span>`}
     </div>`;
   });
   h += `</div>`;
@@ -830,7 +888,7 @@ function renderResult() {
   h += `<div class="flex gap-8 no-print">
     <button class="btn btn-gray" onclick="go('home')">🏠 홈</button>
     <button class="btn" style="flex:1" onclick="startQuiz()">🔄 다시 도전</button>
-    ${score>=80&&state.level<5?`<button class="btn btn-green" onclick="state.level++;startQuiz()">⬆️ 다음 단계</button>`:''}
+    ${score>=80&&state.level<(MODULES.find(x=>x.id===state.curMod)?.levels.length||5)?`<button class="btn btn-green" onclick="state.level++;startQuiz()">⬆️ 다음 단계</button>`:''}
   </div>
   <div class="flex gap-8 mt-8 no-print">
     <button class="btn btn-orange btn-sm btn-full" onclick="window.print()">🖨️ 결과 인쇄</button>
@@ -881,13 +939,13 @@ function renderWrong() {
       items.slice(0, 10).forEach((n, i) => {
         h += `<div class="wrong-note-item">
           <div class="flex justify-between items-center mb-4">
-            <span style="font-size:13px;font-weight:700">${n.q}${n.q.includes('?')?'':' = ?'}</span>
+            <span style="font-size:13px;font-weight:700">${mathDisplay(n.q)}${n.q.includes('?')?'':' = ?'}</span>
             <span style="font-size:10px;color:var(--sub)">${n.date} · 단계${n.lv}</span>
           </div>
           <div style="font-size:12px">
             <span style="color:var(--accent2)">내 답: ${n.ua}</span>
             <span style="margin:0 8px;color:var(--sub)">→</span>
-            <span style="color:var(--green);font-weight:700">정답: ${n.ca}</span>
+            <span style="color:var(--green);font-weight:700">정답: ${mathDisplay(n.ca)}</span>
           </div>
           <div style="font-size:11px;color:var(--gold);margin-top:4px">💡 ${n.h}</div>
         </div>`;
@@ -936,7 +994,7 @@ function renderWrongReview() {
 
     state.wrongReviewResults.forEach(r => {
       h += `<div class="review-item ${r.ok?'review-ok':'review-fail'}" style="text-align:left">
-        ${r.ok?'✅':'❌'} ${r.q} = ${r.ok?r.ca:`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${r.ca}</span>`}
+        ${r.ok?'✅':'❌'} ${mathDisplay(r.q)} = ${r.ok?mathDisplay(r.ca):`<s style="color:var(--accent2)">${r.ua}</s> → <span style="color:var(--green)">${mathDisplay(r.ca)}</span>`}
       </div>`;
     });
 
@@ -970,7 +1028,7 @@ function renderWrongReview() {
       <span style="font-size:12px;color:var(--sub)">복습 ${idx+1}/${total}</span>
       <span class="tag" style="background:rgba(255,159,67,0.15);color:var(--orange)">오답 복습</span>
     </div>
-    <div class="question-box mb-20">${state.prob.q}${state.prob.q.includes('?')?'':' = ?'}</div>`;
+    <div class="question-box mb-20">${mathDisplay(state.prob.q)}${state.prob.q.includes('?')?'':' = ?'}</div>`;
 
   if(state.hint) {
     h += `<div style="background:rgba(255,217,61,0.06);border:1px solid rgba(255,217,61,0.2);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--gold)">💡 ${state.prob.h}</div>`;
@@ -1015,7 +1073,7 @@ function renderWrongReview() {
   if(state.fb) {
     h += `<div style="padding:14px 18px;border-radius:14px;margin-bottom:14px;background:${state.fb.ok?'rgba(46,213,115,0.06)':'rgba(255,107,107,0.06)'};border:1px solid ${state.fb.ok?'rgba(46,213,115,0.2)':'rgba(255,107,107,0.2)'}">
       <div style="font-weight:800;font-size:16px">${state.fb.ok?'🎉 정답! 오답 정복!':'😔 다음에 다시 도전!'}</div>
-      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${state.prob.a}</span></div>`:''}
+      ${!state.fb.ok?`<div style="font-size:13px;color:var(--sub);margin-top:4px">정답: <span style="color:var(--green);font-weight:700">${mathDisplay(state.prob.a)}</span></div>`:''}
     </div>`;
   }
 
@@ -1080,8 +1138,8 @@ function renderWrongNote() {
       <div style="font-size:15px;font-weight:800;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">${m?.icon} ${m?.name} (${items.length}문제)</div>`;
     items.forEach((n, i) => {
       h += `<div class="wrong-note-item">
-        <div style="font-size:13px;font-weight:700;margin-bottom:4px">${i+1}. ${n.q}${n.q.includes('?')?'':' = ?'}</div>
-        <div style="font-size:12px;margin-bottom:2px"><span style="color:var(--accent2)">오답: ${n.ua}</span> → <span style="color:var(--green);font-weight:700">정답: ${n.ca}</span></div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">${i+1}. ${mathDisplay(n.q)}${n.q.includes('?')?'':' = ?'}</div>
+        <div style="font-size:12px;margin-bottom:2px"><span style="color:var(--accent2)">오답: ${n.ua}</span> → <span style="color:var(--green);font-weight:700">정답: ${mathDisplay(n.ca)}</span></div>
         <div style="font-size:11px;color:var(--gold)">💡 ${n.h}</div>
         <div style="font-size:10px;color:var(--sub);margin-top:2px">${n.date} · 단계 ${n.lv}</div>
       </div>`;
@@ -1158,7 +1216,11 @@ function renderRank(lv) {
       <span style="font-weight:800;color:var(--gold);font-size:13px">⚡${e.xp.toLocaleString()}</span>
     </div>`;
   });
-  h += `<div class="text-center mt-8" style="font-size:11px;color:#444">* 데모 데이터 · Flask 백엔드 연동 시 실시간 반영</div></div>`;
+  h += `<div class="text-center mt-8" style="font-size:11px;color:#666;line-height:1.8">
+    ⚠️ 현재 각 기기별 개인 데이터만 표시됩니다.<br>
+    학생 간 실시간 랭킹은 Flask 백엔드 연동 시 구현 예정입니다.<br>
+    (같은 기기·같은 브라우저에서만 데이터가 유지됩니다)
+  </div></div>`;
   return h;
 }
 
