@@ -263,15 +263,17 @@ function mathDisplay(expr) {
   s = s.replace(/(\d+)과\s*(\d+)\/(\d+)/g, function(_,w,n,d){
     return w+'<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span>';
   });
-  // 괄호 안 음수 분수: (-2/3)
-  s = s.replace(/\(−?\s*(\d+)\/(\d+)\)/g, function(m,n,d){
-    let isNeg = m.includes('−') || m.includes('-');
-    // check for minus sign
-    if(m.match(/\(-/)||m.match(/\(−/)) isNeg=true;
-    return '<span class="mf-paren">(</span>'+(isNeg?'<span class="mf-neg">−</span>':'')+'<span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span><span class="mf-paren">)</span>';
+  // 괄호 안 양수 분수: (+2/3)
+  s = s.replace(/\(\+(\d+)\/(\d+)\)/g, function(_,n,d){
+    return '<span class="mf-paren">(</span><span class="mf-neg">+</span><span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span><span class="mf-paren">)</span>';
   });
+  // 괄호 안 음수 분수: (-2/3)
   s = s.replace(/\(\-(\d+)\/(\d+)\)/g, function(_,n,d){
     return '<span class="mf-paren">(</span><span class="mf-neg">−</span><span class="mf"><span class="fn">'+n+'</span><span class="fd">'+d+'</span></span><span class="mf-paren">)</span>';
+  });
+  // 괄호 안 양수 정수: (+3)
+  s = s.replace(/\(\+(\d+)\)/g, function(_,n){
+    return '<span class="mf-paren">(</span>+'+n+'<span class="mf-paren">)</span>';
   });
   // 독립 음수 분수 (맨 앞): -2/3
   s = s.replace(/(^|[=\s])-(\d+)\/(\d+)/g, function(_,pre,n,d){
@@ -374,14 +376,20 @@ function genProblem(mod, lv) {
 
   if(mod==="rational") {
     // 유리수 분수 표기 (연산 중간 음수는 괄호 필수)
+    // fmtR: 생략 표기용 (맨앞 음수는 괄호 생략, 중간 음수는 괄호)
     const fmtR = (n,d,isFirst) => {
       if(d===1) return n<0?(isFirst?`${n}`:`(${n})`):String(n);
       if(n<0 && !isFirst) return `(-${Math.abs(n)}/${d})`;
       return `${n}/${d}`;
     };
+    // fmtRP: 괄호 표기용 — 양수도 (+1/2), 음수도 (-3/5) 로 부호+괄호 모두 표시
+    const fmtRP = (n,d) => {
+      if(d===1) return n>=0?`(+${n})`:`(${n})`;
+      return n>=0?`(+${n}/${d})`:`(${n}/${d})`;
+    };
     if(lv===1){ const d=pick([3,4,5,6]); let n1=rand(-d+1,d-1),n2=rand(-d+1,d-1); while(n2===n1) n2=rand(-d+1,d-1); const v1=n1/d,v2=n2/d; const bigger=v1>v2?fmtFrac(n1,d):fmtFrac(n2,d); return{q:`${fmtFrac(n1,d)}와 ${fmtFrac(n2,d)} 중 큰 수는?`,a:bigger,h:"분모 같으면 분자 큰 것"}; }
-    if(lv===2){ // 유리수 덧뺄 — 괄호 표기: 3/4 + (-3/5)
-      const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${fmtR(n1,d1,true)} ${op} ${fmtR(n2,d2,false)}`,a:fmtFrac(sn,sd),h:"통분(공통분모:"+cd+") → 계산 → 약분"}; }
+    if(lv===2){ // 유리수 덧뺄 — 괄호 표기: (+1/2) + (-3/5)
+      const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd); return{q:`${fmtRP(n1,d1)} ${op} ${fmtRP(n2,d2)}`,a:fmtFrac(sn,sd),h:"통분(공통분모:"+cd+") → 계산 → 약분"}; }
     if(lv===3){ // 유리수 덧뺄 — 생략 표기: -1/3 + 2/5
       const d1=pick([2,3,4,5,6]),d2=pick([2,3,4,5,6]),n1=rand(1,d1-1)*pick([1,-1]),n2=rand(1,d2-1)*pick([1,-1]),op=pick(["+","-"]),cd=lcm(d1,d2); const rn=op==="+"?n1*(cd/d1)+n2*(cd/d2):n1*(cd/d1)-n2*(cd/d2); const[sn,sd]=simplify(rn,cd);
       let qs; if(n2<0){qs=`${fmtFrac(n1,d1)} ${op} (${fmtFrac(n2,d2)})`} else{qs=`${fmtFrac(n1,d1)} ${op} ${fmtFrac(n2,d2)}`}
