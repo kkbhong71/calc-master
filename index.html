@@ -686,10 +686,16 @@ async function loadStudentList() {
   showLoading('학생 목록 불러오는 중...');
   const res = await gasAPI('getStudents');
   if(res.ok) {
-    state.studentList = res.students;
-    if(res.students.length>0 && !state.selGrade) {
-      state.selGrade = res.students[0].grade;
-      state.selClass = res.students[0].cls;
+    // 헤더 행 필터링: 학년/반/번호가 숫자가 아닌 행 제거
+    state.studentList = (res.students||[]).filter(s => 
+      /^\d+$/.test(String(s.grade).trim()) && 
+      /^\d+$/.test(String(s.cls).trim()) && 
+      /^\d+$/.test(String(s.number).trim()) &&
+      s.name && s.name.trim()
+    );
+    if(state.studentList.length>0 && !state.selGrade) {
+      state.selGrade = state.studentList[0].grade;
+      state.selClass = state.studentList[0].cls;
     }
   }
   state.loading = false;
@@ -1614,6 +1620,13 @@ async function loadDashboard() {
   showLoading('데이터 불러오는 중...');
   const res = await gasAPI('getDashboard');
   if(res.ok) {
+    // 헤더 행 필터링
+    res.students = (res.students||[]).filter(s => 
+      /^\d+$/.test(String(s.grade).trim()) && 
+      /^\d+$/.test(String(s.cls).trim()) && 
+      /^\d+$/.test(String(s.number).trim()) &&
+      s.name && s.name.trim()
+    );
     state.dashboardData = res;
     state.studentList = res.students.map(s=>({grade:s.grade,cls:s.cls,number:s.number,name:s.name}));
   }
