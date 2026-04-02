@@ -413,7 +413,7 @@ function genProblem(mod, lv) {
 
 // ── 앱 상태 ──
 // ★★★ 아래 URL을 GAS 웹앱 배포 URL로 변경하세요 ★★★
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzioY5hliR-o6tYvpVY9HeUmZkNToqpwV2aOha8Nf8PIS4Z19ada-JnQ3ZVXOkgO0yppw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxlA706Dgs7AGgVBgd7UcAzvKjl9WfC8E9ydad0ZOzu5sNnWq4BzCqeKQm-SdsLAX84Cg/exec';
 
 let state = {
   view: 'login', curMod: null, level: 1,
@@ -448,7 +448,7 @@ let data = initData();
 // 🌐 GAS API 통신
 // ═══════════════════════════════════════════════════════════
 async function gasAPI(action, params = {}) {
-  if(GAS_URL === 'https://script.google.com/macros/s/AKfycbzioY5hliR-o6tYvpVY9HeUmZkNToqpwV2aOha8Nf8PIS4Z19ada-JnQ3ZVXOkgO0yppw/exec') {
+  if(GAS_URL === 'https://script.google.com/macros/s/AKfycbxlA706Dgs7AGgVBgd7UcAzvKjl9WfC8E9ydad0ZOzu5sNnWq4BzCqeKQm-SdsLAX84Cg/exec') {
     alert('⚠️ GAS_URL이 설정되지 않았습니다.\nindex.html 상단의 GAS_URL을 배포된 웹앱 URL로 변경하세요.');
     return { ok: false, error: 'GAS_URL 미설정' };
   }
