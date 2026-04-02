@@ -49,6 +49,7 @@ body {
 }
 .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
 .input-sm { font-size: 14px; padding: 10px 14px; text-align: left; }
+select.input { appearance: auto; cursor: pointer; }
 .tag {
   display: inline-block; padding: 3px 9px; border-radius: 7px;
   font-size: 11px; font-weight: 700;
@@ -313,8 +314,6 @@ const BADGES = [
   { id:"note30", name:"복습왕", icon:"📝", desc:"오답노트 30문제 복습", cond:s=>s.noteReviewed>=30 },
 ];
 
-const ADMIN_PW = "oseong2026";
-
 // ── 문제 생성 엔진 ──
 function genProblem(mod, lv) {
   const fmt = n => n<0?`(${n})`:`${n}`;
@@ -412,18 +411,24 @@ function genProblem(mod, lv) {
 
 // ── 앱 상태 ──
 let state = {
-  view: 'home', curMod: null, level: 1,
+  view: 'login', curMod: null, level: 1,
   prob: null, ans: '', fb: null, hint: false,
   quiz: { cur:0, tot:10, ok:0, results:[] },
   timerMode: false, timerSec: 30, timerLeft: 30, timerInterval: null,
-  isAdmin: false,
-  inputMode: 'keyboard', // 'keyboard' or 'handwrite'
+  isAdmin: false, loggedIn: false,
+  inputMode: 'keyboard',
   penSize: 3, penColor: '#ffffff', isEraser: false,
   canvasHistory: [],
+  loginTab: 'student', // 'student' or 'admin'
+  selGrade: '1', selClass: '1', selNumber: '',
 };
 
+const ADMIN_PW = "oseong2026";
+const DEFAULT_STU_PW = "1234";
+
 const initData = () => ({
-  name:'', xp:0, level:1, total:0, correct:0,
+  name:'', grade:'', cls:'', number:'',
+  xp:0, level:1, total:0, correct:0,
   streak:0, lastDate:null, consec:0, maxConsec:0,
   badges:[], modSolved:{}, modCorrect:{},
   wrongNotes:[], joinDate:null,
@@ -432,14 +437,52 @@ const initData = () => ({
 
 let data = initData();
 
-// ── 저장/로드 ──
-function saveData() { try{localStorage.setItem('calc_master_v3', JSON.stringify(data))}catch{} }
-function loadData() {
+// ── 학교 데이터 (학생 명단) ──
+function getSchool() {
   try {
-    const s = localStorage.getItem('calc_master_v3');
-    if(s) { data = {...initData(), ...JSON.parse(s)}; return true; }
+    const s = localStorage.getItem('cm_school');
+    if(s) return JSON.parse(s);
   } catch{}
-  return false;
+  return { students: [], adminPw: ADMIN_PW };
+}
+function saveSchool(school) {
+  try { localStorage.setItem('cm_school', JSON.stringify(school)); } catch{}
+}
+
+// ── 학생별 데이터 저장/로드 ──
+function stuKey(g,c,n) { return `cm_stu_${g}_${c}_${n}`; }
+
+function saveData() {
+  if(!data.grade) return;
+  try { localStorage.setItem(stuKey(data.grade, data.cls, data.number), JSON.stringify(data)); } catch{}
+}
+function loadStudentData(g,c,n) {
+  try {
+    const s = localStorage.getItem(stuKey(g,c,n));
+    if(s) return {...initData(), ...JSON.parse(s)};
+  } catch{}
+  return null;
+}
+
+// ── 전체 학생 랭킹 데이터 수집 ──
+function getAllStudentData() {
+  const school = getSchool();
+  const results = [];
+  school.students.forEach(st => {
+    const d = loadStudentData(st.grade, st.cls, st.number);
+    results.push({
+      name: st.name, grade: st.grade, cls: st.cls, number: st.number,
+      xp: d ? d.xp : 0, level: d ? getLv(d.xp).level : 1,
+      total: d ? d.total : 0, correct: d ? d.correct : 0,
+      streak: d ? d.streak : 0, wrongs: d ? (d.wrongNotes||[]).length : 0,
+      lastDate: d ? d.lastDate : '-',
+      acc: d && d.total>0 ? Math.round(d.correct/d.total*100) : 0,
+      modSolved: d ? d.modSolved||{} : {},
+      modCorrect: d ? d.modCorrect||{} : {},
+      badges: d ? d.badges||[] : [],
+    });
+  });
+  return results;
 }
 
 // ── 레벨 ──
@@ -458,7 +501,7 @@ function checkStreak() {
 // ── 렌더링 ──
 function render() {
   const app = $('#app');
-  if(!data.name) { renderNameInput(); return; }
+  if(!state.loggedIn) { renderLogin(); return; }
 
   const lv = getLv(data.xp);
   const acc = data.total>0 ? Math.round(data.correct/data.total*100) : 0;
@@ -472,32 +515,40 @@ function render() {
           <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v3.1 · K.G.B</div>
         </div>
       </div>
-      ${state.view!=='quiz'?`<div class="flex items-center gap-8">
-        <span style="font-size:12px;color:var(--gold);font-weight:700">⚡${data.xp}</span>
-        <span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${lv.level}</span>
-      </div>`:''}
+      <div class="flex items-center gap-8 no-print">
+        ${state.isAdmin?'<span class="tag" style="background:rgba(255,107,107,0.15);color:var(--accent2)">👨‍🏫 관리자</span>':`<span style="font-size:12px;color:var(--gold);font-weight:700">⚡${data.xp}</span><span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${lv.level}</span>`}
+        <button class="btn btn-gray btn-sm" onclick="logout()" style="padding:5px 10px;font-size:11px">🚪</button>
+      </div>
     </div>`;
 
-  // 네비게이션
-  if(!['quiz','result','module','wrongNote','wrongReview'].includes(state.view)) {
+  // 관리자 모드
+  if(state.isAdmin) {
     html += `<div class="nav no-print">
-      ${[{id:'home',l:'🏠 홈'},{id:'profile',l:'🏅 프로필'},{id:'wrong',l:'📝 오답노트'},{id:'rank',l:'🏆 랭킹'},{id:'admin',l:'🔐 관리자'}]
+      ${[{id:'adminStudents',l:'👨‍🎓 학생관리'},{id:'adminDash',l:'📊 현황'},{id:'adminRank',l:'🏆 랭킹'}]
         .map(t=>`<button class="nav-btn ${state.view===t.id?'active':''}" onclick="go('${t.id}')">${t.l}</button>`).join('')}
     </div>`;
+    if(state.view==='adminStudents') html += renderAdminStudents();
+    else if(state.view==='adminDash') html += renderAdminDash();
+    else if(state.view==='adminRank') html += renderAdminRank();
+    else { state.view='adminStudents'; html += renderAdminStudents(); }
+  } else {
+    // 학생 모드 네비게이션
+    if(!['quiz','result','module','wrongNote','wrongReview'].includes(state.view)) {
+      html += `<div class="nav no-print">
+        ${[{id:'home',l:'🏠 홈'},{id:'profile',l:'🏅 프로필'},{id:'wrong',l:'📝 오답노트'},{id:'rank',l:'🏆 랭킹'}]
+          .map(t=>`<button class="nav-btn ${state.view===t.id?'active':''}" onclick="go('${t.id}')">${t.l}</button>`).join('')}
+      </div>`;
+    }
+    if(state.view==='home') html += renderHome(lv, acc);
+    else if(state.view==='module') html += renderModule();
+    else if(state.view==='quiz') html += renderQuiz();
+    else if(state.view==='result') html += renderResult();
+    else if(state.view==='profile') html += renderProfile(lv, acc);
+    else if(state.view==='wrong') html += renderWrong();
+    else if(state.view==='wrongNote') html += renderWrongNote();
+    else if(state.view==='wrongReview') html += renderWrongReview();
+    else if(state.view==='rank') html += renderRank(lv);
   }
-
-  // 뷰 렌더링
-  if(state.view==='home') html += renderHome(lv, acc);
-  else if(state.view==='module') html += renderModule();
-  else if(state.view==='quiz') html += renderQuiz();
-  else if(state.view==='result') html += renderResult();
-  else if(state.view==='profile') html += renderProfile(lv, acc);
-  else if(state.view==='wrong') html += renderWrong();
-  else if(state.view==='wrongNote') html += renderWrongNote();
-  else if(state.view==='wrongReview') html += renderWrongReview();
-  else if(state.view==='rank') html += renderRank(lv);
-  else if(state.view==='admin') html += renderAdmin();
-  else if(state.view==='adminDash') html += renderAdminDash();
 
   html += `<div class="text-center no-print" style="padding:20px 0 12px;font-size:10px;color:#333">
     오성 연산 마스터 v3.1 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
@@ -521,30 +572,110 @@ function go(view) {
   render();
 }
 
-// ── 이름 입력 ──
-function renderNameInput() {
+// ── 이름 입력 → 로그인 시스템 ──
+function renderLogin() {
+  const school = getSchool();
+  const students = school.students || [];
+  
+  // 선택한 학년/반에 해당하는 학생 필터
+  const filtered = students.filter(s => s.grade===state.selGrade && s.cls===state.selClass);
+
   $('#app').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;min-height:92vh">
-      <div class="card text-center" style="max-width:400px;width:100%;padding:36px">
-        <div style="font-size:52px;margin-bottom:12px">🔢</div>
-        <h1 style="font-size:24px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</h1>
-        <p style="color:var(--sub);font-size:13px;margin-bottom:6px">기초 연산 집중 학습 프로그램</p>
-        <p style="color:var(--sub);font-size:11px;margin-bottom:24px">초등 5~6학년 · 중학교 기초 연산 완전 정복</p>
-        <input class="input mb-16" id="name-input" placeholder="이름을 입력하세요" onkeydown="if(event.key==='Enter')setName()">
-        <button class="btn btn-full" onclick="setName()">🚀 학습 시작</button>
+      <div class="card text-center" style="max-width:420px;width:100%;padding:32px">
+        <div style="font-size:48px;margin-bottom:10px">🔢</div>
+        <h1 style="font-size:22px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</h1>
+        <p style="color:var(--sub);font-size:12px;margin-bottom:20px">기초 연산 집중 학습 프로그램</p>
+
+        <!-- 모드 선택 탭 -->
+        <div class="input-mode-toggle mb-16">
+          <button class="mode-btn ${state.loginTab==='student'?'active':''}" onclick="state.loginTab='student';render()">🎒 학생 입장</button>
+          <button class="mode-btn ${state.loginTab==='admin'?'active':''}" onclick="state.loginTab='admin';render()">👨‍🏫 관리자 입장</button>
+        </div>
+
+        ${state.loginTab==='student' ? `
+          <!-- 학생 로그인 -->
+          ${students.length===0 ? `
+            <div style="padding:24px;background:rgba(255,159,67,0.08);border:1px solid rgba(255,159,67,0.2);border-radius:14px;margin-bottom:16px">
+              <div style="font-size:32px;margin-bottom:8px">📋</div>
+              <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:4px">학생 명단이 없습니다</div>
+              <div style="font-size:12px;color:var(--sub)">관리자가 먼저 학생 명단을 등록해야 합니다.<br>관리자 탭에서 로그인 후 학생을 추가하세요.</div>
+            </div>
+          ` : `
+            <div style="text-align:left;margin-bottom:14px">
+              <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">학년 · 반 선택</div>
+              <div class="flex gap-8 mb-12">
+                <select class="input input-sm" style="flex:1;text-align:center" onchange="state.selGrade=this.value;state.selNumber='';render()">
+                  ${[...new Set(students.map(s=>s.grade))].sort().map(g=>`<option value="${g}" ${state.selGrade===g?'selected':''}>${g}학년</option>`).join('')}
+                </select>
+                <select class="input input-sm" style="flex:1;text-align:center" onchange="state.selClass=this.value;state.selNumber='';render()">
+                  ${[...new Set(students.filter(s=>s.grade===state.selGrade).map(s=>s.cls))].sort().map(c=>`<option value="${c}" ${state.selClass===c?'selected':''}>${c}반</option>`).join('')}
+                </select>
+              </div>
+              <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">이름 선택</div>
+              <select class="input input-sm mb-12" style="text-align:center" onchange="state.selNumber=this.value;render()" id="stu-select">
+                <option value="">-- 이름을 선택하세요 --</option>
+                ${filtered.map(s=>`<option value="${s.number}" ${state.selNumber===s.number?'selected':''}>${s.number}번 ${s.name}</option>`).join('')}
+              </select>
+              <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">비밀번호</div>
+              <input class="input input-sm mb-16" id="stu-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
+                onkeydown="if(event.key==='Enter')loginStudent()">
+            </div>
+            <button class="btn btn-full" onclick="loginStudent()">🚀 학습 시작</button>
+          `}
+        ` : `
+          <!-- 관리자 로그인 -->
+          <div style="text-align:left;margin-bottom:14px">
+            <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">관리자 비밀번호</div>
+            <input class="input input-sm mb-16" id="admin-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
+              onkeydown="if(event.key==='Enter')loginAdmin()">
+          </div>
+          <button class="btn btn-full" onclick="loginAdmin()">🔑 관리자 로그인</button>
+        `}
+        <div id="login-error" style="color:var(--accent2);font-size:12px;margin-top:10px"></div>
       </div>
     </div>`;
 }
 
-function setName() {
-  const v = ($('#name-input')||{}).value;
-  if(!v || !v.trim()) return;
-  const now = new Date().toISOString().slice(0,10);
-  data.name = v.trim();
-  data.joinDate = now;
-  data.lastDate = now;
-  data.streak = 1;
+function loginStudent() {
+  const school = getSchool();
+  const g = state.selGrade, c = state.selClass, n = state.selNumber;
+  const pw = ($('#stu-pw')||{}).value;
+  if(!n) { $('#login-error').textContent = '이름을 선택하세요.'; return; }
+  if(!pw) { $('#login-error').textContent = '비밀번호를 입력하세요.'; return; }
+  const stu = school.students.find(s=>s.grade===g && s.cls===c && s.number===n);
+  if(!stu) { $('#login-error').textContent = '학생 정보를 찾을 수 없습니다.'; return; }
+  if((stu.pw||DEFAULT_STU_PW) !== pw) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
+
+  // 로그인 성공
+  const existing = loadStudentData(g, c, n);
+  if(existing) {
+    data = existing;
+  } else {
+    data = initData();
+    data.name = stu.name;
+    data.grade = g; data.cls = c; data.number = n;
+    data.joinDate = new Date().toISOString().slice(0,10);
+  }
+  data.name = stu.name; data.grade=g; data.cls=c; data.number=n;
+  checkStreak();
   saveData();
+  state.loggedIn = true; state.isAdmin = false; state.view = 'home';
+  render();
+}
+
+function loginAdmin() {
+  const pw = ($('#admin-pw')||{}).value;
+  const school = getSchool();
+  if(pw !== (school.adminPw || ADMIN_PW)) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
+  state.loggedIn = true; state.isAdmin = true; state.view = 'adminStudents';
+  render();
+}
+
+function logout() {
+  state.loggedIn = false; state.isAdmin = false; state.view = 'login';
+  state.loginTab = 'student'; state.selNumber = '';
+  data = initData();
   render();
 }
 
@@ -1199,84 +1330,209 @@ function renderProfile(lv, acc) {
   });
   h += `</div>`;
 
-  h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('모든 데이터를 초기화할까요?')){localStorage.removeItem('calc_master_v3');location.reload()}">🗑️ 초기화</button>`;
+  h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('내 학습 데이터를 초기화할까요?')){localStorage.removeItem(stuKey(data.grade,data.cls,data.number));logout()}">🗑️ 내 데이터 초기화</button>`;
   return h;
 }
 
 function printProfile() { window.print(); }
 
 // ── 랭킹 ──
+// ═══════════════════════════════════════════════════════════
+// 🏆 실시간 랭킹 (학생용)
+// ═══════════════════════════════════════════════════════════
 function renderRank(lv) {
-  const board = [
-    {n:data.name,xp:data.xp,lv:lv.level,me:true},
-    {n:'수학왕 민준',xp:2450,lv:8},{n:'연산퀸 서연',xp:2100,lv:7},
-    {n:'분수달인 지호',xp:1800,lv:6},{n:'소수마스터 하은',xp:1500,lv:5},
-    {n:'정수킹 도윤',xp:1200,lv:4},{n:'열공 유진',xp:900,lv:3},
-  ].sort((a,b)=>b.xp-a.xp);
+  const all = getAllStudentData().sort((a,b)=>b.xp-a.xp);
+  const me = data.grade+'-'+data.cls+'-'+data.number;
 
   let h = `<div class="card"><h2 style="font-size:18px;font-weight:800;text-align:center;margin-bottom:16px">🏆 오성 연산 마스터 랭킹</h2>`;
-  board.forEach((e,i) => {
-    const colors = ['var(--gold)','#C0C0C0','#CD7F32'];
-    h += `<div class="flex items-center gap-10" style="padding:10px 14px;border-radius:12px;margin-bottom:6px;background:${e.me?'rgba(108,99,255,0.07)':'rgba(255,255,255,0.02)'};border:${e.me?'1px solid rgba(108,99,255,0.2)':'1px solid transparent'}">
-      <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;background:${i<3?colors[i]+'22':'rgba(255,255,255,0.04)'};color:${i<3?colors[i]:'var(--sub)'}">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
-      <div style="flex:1"><span style="font-weight:${e.me?800:600};font-size:13px">${e.n}</span>${e.me?'<span style="font-size:10px;color:var(--accent);margin-left:6px">(나)</span>':''}</div>
-      <span style="font-size:10px;color:var(--sub)">Lv.${e.lv}</span>
-      <span style="font-weight:800;color:var(--gold);font-size:13px">⚡${e.xp.toLocaleString()}</span>
-    </div>`;
-  });
-  h += `<div class="text-center mt-8" style="font-size:11px;color:#666;line-height:1.8">
-    ⚠️ 현재 각 기기별 개인 데이터만 표시됩니다.<br>
-    학생 간 실시간 랭킹은 Flask 백엔드 연동 시 구현 예정입니다.<br>
-    (같은 기기·같은 브라우저에서만 데이터가 유지됩니다)
+  
+  if(all.length===0) {
+    h += `<div class="text-center" style="padding:30px;color:var(--sub)">등록된 학생이 없습니다.</div>`;
+  } else {
+    all.forEach((e,i) => {
+      const isMe = e.grade+'-'+e.cls+'-'+e.number === me;
+      const colors = ['var(--gold)','#C0C0C0','#CD7F32'];
+      h += `<div class="flex items-center gap-10" style="padding:10px 14px;border-radius:12px;margin-bottom:6px;background:${isMe?'rgba(108,99,255,0.07)':'rgba(255,255,255,0.02)'};border:${isMe?'1px solid rgba(108,99,255,0.2)':'1px solid transparent'}">
+        <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;background:${i<3?colors[i]+'22':'rgba(255,255,255,0.04)'};color:${i<3?colors[i]:'var(--sub)'}">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
+        <div style="flex:1">
+          <span style="font-weight:${isMe?800:600};font-size:13px">${e.grade}-${e.cls} ${e.name}</span>
+          ${isMe?'<span style="font-size:10px;color:var(--accent);margin-left:6px">(나)</span>':''}
+        </div>
+        <span style="font-size:10px;color:var(--sub)">Lv.${e.level}</span>
+        <span style="font-weight:800;color:var(--gold);font-size:13px">⚡${e.xp.toLocaleString()}</span>
+      </div>`;
+    });
+  }
+  h += `<div class="text-center mt-8" style="font-size:11px;color:#666;line-height:1.6">
+    같은 기기·같은 브라우저에서 로그인한 학생들의 실시간 랭킹입니다.
   </div></div>`;
   return h;
 }
 
 // ═══════════════════════════════════════════════════════════
-// 🔐 관리자 모드
+// 👨‍🏫 관리자 모드
 // ═══════════════════════════════════════════════════════════
-function renderAdmin() {
-  if(state.isAdmin) return renderAdminDash();
 
-  return `<div class="card text-center" style="padding:36px">
-    <div style="font-size:48px;margin-bottom:12px">🔐</div>
-    <h2 style="font-size:20px;font-weight:800;margin-bottom:16px">관리자 로그인</h2>
-    <p style="color:var(--sub);font-size:13px;margin-bottom:20px">교사용 대시보드에 접근하려면 비밀번호를 입력하세요.</p>
-    <input class="input input-sm mb-12" id="admin-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
-      onkeydown="if(event.key==='Enter')adminLogin()">
-    <button class="btn btn-full" onclick="adminLogin()">🔑 로그인</button>
-    <div id="admin-error" style="color:var(--accent2);font-size:12px;margin-top:8px"></div>
+// ── 학생 관리 ──
+function renderAdminStudents() {
+  const school = getSchool();
+  const students = school.students || [];
+
+  let h = `<div class="card">
+    <div class="flex justify-between items-center mb-16">
+      <div>
+        <h2 style="font-size:18px;font-weight:800;margin:0">👨‍🎓 학생 관리</h2>
+        <p style="color:var(--sub);font-size:12px">총 ${students.length}명 등록</p>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-orange btn-sm" onclick="window.print()">🖨️</button>
+      </div>
+    </div>`;
+
+  // CSV 업로드
+  h += `<div style="padding:16px;background:rgba(108,99,255,0.05);border:1px solid rgba(108,99,255,0.15);border-radius:14px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)">📤 학생 일괄 등록 (CSV/엑셀)</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">엑셀에서 <strong>학년, 반, 번호, 이름</strong> 순서로 복사하여 아래에 붙여넣기하세요.<br>탭 또는 쉼표로 구분됩니다. 기존 명단에 추가됩니다.</div>
+    <textarea class="input input-sm" id="csv-input" rows="5" placeholder="1\t1\t1\t강지후&#10;1\t1\t2\t김가영&#10;1\t1\t3\t김건우" style="text-align:left;font-size:12px;resize:vertical;width:100%"></textarea>
+    <div class="flex gap-8 mt-8">
+      <button class="btn btn-sm" onclick="uploadCSV()">📥 등록하기</button>
+      <button class="btn btn-sm btn-gray" onclick="$('#csv-file').click()">📁 파일 선택</button>
+      <input type="file" id="csv-file" accept=".csv,.txt,.tsv" style="display:none" onchange="loadCSVFile(this)">
+    </div>
+    <div id="csv-result" style="font-size:12px;margin-top:8px"></div>
   </div>`;
-}
 
-function adminLogin() {
-  const pw = ($('#admin-pw')||{}).value;
-  if(pw === ADMIN_PW) {
-    state.isAdmin = true;
-    go('admin');
-  } else {
-    const el = $('#admin-error');
-    if(el) el.textContent = '❌ 비밀번호가 틀렸습니다.';
+  // 개별 추가
+  h += `<div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px">➕ 개별 학생 추가</div>
+    <div class="flex gap-8 mb-8 flex-wrap">
+      <input class="input input-sm" id="add-grade" placeholder="학년" style="width:70px;text-align:center">
+      <input class="input input-sm" id="add-class" placeholder="반" style="width:70px;text-align:center">
+      <input class="input input-sm" id="add-num" placeholder="번호" style="width:70px;text-align:center">
+      <input class="input input-sm" id="add-name" placeholder="이름" style="flex:1;min-width:80px">
+      <button class="btn btn-sm btn-green" onclick="addOneStudent()">추가</button>
+    </div>
+  </div>`;
+
+  // 등록된 학생 목록
+  if(students.length > 0) {
+    // 학년/반별 그룹
+    const grouped = {};
+    students.forEach(s => {
+      const key = s.grade+'-'+s.cls;
+      if(!grouped[key]) grouped[key] = [];
+      grouped[key].push(s);
+    });
+
+    Object.keys(grouped).sort().forEach(key => {
+      const items = grouped[key].sort((a,b)=>parseInt(a.number)-parseInt(b.number));
+      const [g,c] = key.split('-');
+      h += `<div style="margin-bottom:16px">
+        <div class="flex justify-between items-center mb-8">
+          <span style="font-size:14px;font-weight:700">${g}학년 ${c}반 (${items.length}명)</span>
+        </div>
+        <div style="overflow-x:auto"><table class="admin-table"><thead><tr>
+          <th>번호</th><th>이름</th><th>비밀번호</th><th style="width:60px">관리</th>
+        </tr></thead><tbody>`;
+      items.forEach(s => {
+        h += `<tr>
+          <td>${s.number}번</td>
+          <td style="font-weight:700">${s.name}</td>
+          <td>
+            <input class="input input-sm" value="${s.pw||DEFAULT_STU_PW}" style="width:80px;font-size:11px;padding:4px 8px;text-align:center"
+              onchange="updateStudentPw('${s.grade}','${s.cls}','${s.number}',this.value)">
+          </td>
+          <td><button class="btn btn-red btn-sm" style="padding:3px 8px;font-size:10px"
+            onclick="removeStudent('${s.grade}','${s.cls}','${s.number}')">삭제</button></td>
+        </tr>`;
+      });
+      h += `</tbody></table></div></div>`;
+    });
+
+    h += `<div class="flex gap-8 mt-8">
+      <button class="btn btn-sm btn-orange" onclick="resetAllPasswords()">🔑 비밀번호 전체 초기화</button>
+      <button class="btn btn-sm btn-red" onclick="if(confirm('모든 학생 명단을 삭제할까요?')){saveSchool({students:[],adminPw:getSchool().adminPw||ADMIN_PW});render()}">🗑️ 전체 삭제</button>
+    </div>`;
   }
+
+  h += `</div>`;
+  return h;
 }
 
-function renderAdminDash() {
-  // 데모 학생 데이터 + 현재 사용자
-  const demoStudents = [
-    {name:'김민준',lv:8,xp:2450,total:156,correct:136,streak:12,acc:87,mods:{natural:45,factor:20,fraction:38,decimal:22,mixed:10,integer:12,rational:5,power:4},wrongs:8,lastDate:'2026-03-26'},
-    {name:'이서연',lv:7,xp:2100,total:134,correct:110,streak:8,acc:82,mods:{natural:40,factor:15,fraction:35,decimal:18,mixed:8,integer:10,rational:5,power:3},wrongs:12,lastDate:'2026-03-25'},
-    {name:'박지호',lv:6,xp:1800,total:112,correct:87,streak:5,acc:78,mods:{natural:35,factor:12,fraction:32,decimal:15,mixed:6,integer:8,rational:3,power:1},wrongs:18,lastDate:'2026-03-26'},
-    {name:'최하은',lv:5,xp:1500,total:98,correct:73,streak:3,acc:74,mods:{natural:30,factor:10,fraction:28,decimal:12,mixed:5,integer:8,rational:3,power:2},wrongs:15,lastDate:'2026-03-24'},
-    {name:'정도윤',lv:4,xp:1200,total:76,correct:53,streak:2,acc:70,mods:{natural:25,factor:8,fraction:20,decimal:10,mixed:4,integer:5,rational:2,power:2},wrongs:20,lastDate:'2026-03-23'},
-    {name:'강유진',lv:3,xp:900,total:54,correct:35,streak:1,acc:65,mods:{natural:18,factor:6,fraction:15,decimal:8,mixed:3,integer:3,rational:1,power:0},wrongs:14,lastDate:'2026-03-22'},
-  ];
+function uploadCSV() {
+  const raw = ($('#csv-input')||{}).value;
+  if(!raw || !raw.trim()) { $('#csv-result').innerHTML = '<span style="color:var(--accent2)">데이터를 입력하세요.</span>'; return; }
+  const lines = raw.trim().split('\n').filter(l=>l.trim());
+  const school = getSchool();
+  let added = 0, skipped = 0;
+  lines.forEach(line => {
+    const parts = line.split(/[\t,]/).map(s=>s.trim());
+    if(parts.length < 4) { skipped++; return; }
+    const [grade,cls,number,name] = parts;
+    if(!grade||!cls||!number||!name) { skipped++; return; }
+    const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===number);
+    if(exists) { exists.name=name; skipped++; return; }
+    school.students.push({ grade, cls, number, name, pw: DEFAULT_STU_PW });
+    added++;
+  });
+  saveSchool(school);
+  $('#csv-result').innerHTML = `<span style="color:var(--green)">✅ ${added}명 추가 완료${skipped>0?` (${skipped}건 건너뜀)`:''}</span>`;
+  setTimeout(() => render(), 1000);
+}
 
-  // 현재 사용자 추가
-  const curAcc = data.total>0?Math.round(data.correct/data.total*100):0;
-  const allStudents = [{
-    name:data.name+'(현재)',lv:getLv(data.xp).level,xp:data.xp,total:data.total,correct:data.correct,
-    streak:data.streak,acc:curAcc,mods:data.modSolved,wrongs:data.wrongNotes.length,lastDate:data.lastDate||'-',isCurrent:true
-  }, ...demoStudents];
+function loadCSVFile(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const el = $('#csv-input');
+    if(el) el.value = e.target.result;
+  };
+  reader.readAsText(file);
+}
+
+function addOneStudent() {
+  const grade=($('#add-grade')||{}).value, cls=($('#add-class')||{}).value;
+  const num=($('#add-num')||{}).value, name=($('#add-name')||{}).value;
+  if(!grade||!cls||!num||!name) { alert('모든 항목을 입력하세요.'); return; }
+  const school = getSchool();
+  const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===num);
+  if(exists) { alert('이미 등록된 학생입니다.'); return; }
+  school.students.push({ grade, cls, number:num, name:name.trim(), pw: DEFAULT_STU_PW });
+  saveSchool(school);
+  render();
+}
+
+function removeStudent(g,c,n) {
+  if(!confirm('이 학생을 삭제할까요?')) return;
+  const school = getSchool();
+  school.students = school.students.filter(s=>!(s.grade===g&&s.cls===c&&s.number===n));
+  saveSchool(school);
+  try { localStorage.removeItem(stuKey(g,c,n)); } catch{}
+  render();
+}
+
+function updateStudentPw(g,c,n,pw) {
+  const school = getSchool();
+  const stu = school.students.find(s=>s.grade===g&&s.cls===c&&s.number===n);
+  if(stu) { stu.pw = pw; saveSchool(school); }
+}
+
+function resetAllPasswords() {
+  if(!confirm('모든 학생의 비밀번호를 "'+DEFAULT_STU_PW+'"로 초기화할까요?')) return;
+  const school = getSchool();
+  school.students.forEach(s => s.pw = DEFAULT_STU_PW);
+  saveSchool(school);
+  render();
+}
+
+// ── 관리자 현황 대시보드 ──
+function renderAdminDash() {
+  const allStudents = getAllStudentData();
+  if(allStudents.length===0) {
+    return `<div class="card text-center" style="padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div>
+      <div style="font-size:14px;color:var(--sub)">등록된 학생이 없습니다. 학생관리 탭에서 먼저 학생을 추가하세요.</div></div>`;
+  }
 
   const avgAcc = Math.round(allStudents.reduce((s,st)=>s+st.acc,0)/allStudents.length);
   const totalSolved = allStudents.reduce((s,st)=>s+st.total,0);
@@ -1284,93 +1540,89 @@ function renderAdminDash() {
 
   let h = `<div class="card">
     <div class="flex justify-between items-center">
-      <div>
-        <h2 style="font-size:20px;font-weight:900;margin:0">👨‍🏫 관리자 대시보드</h2>
-        <p style="color:var(--sub);font-size:12px">오성중학교 수학 기초학력 향상 프로그램</p>
-      </div>
-      <div class="flex gap-8 no-print">
-        <button class="btn btn-orange btn-sm" onclick="window.print()">🖨️ 인쇄</button>
-        <button class="btn btn-gray btn-sm" onclick="state.isAdmin=false;go('home')">로그아웃</button>
-      </div>
+      <div><h2 style="font-size:20px;font-weight:900;margin:0">📊 학습 현황 대시보드</h2>
+        <p style="color:var(--sub);font-size:12px">오성중학교 수학 기초학력 향상 프로그램</p></div>
+      <button class="btn btn-orange btn-sm no-print" onclick="window.print()">🖨️ 인쇄</button>
     </div>
     <div class="print-only mt-8" style="font-size:12px;color:#666">출력일: ${new Date().toLocaleDateString('ko-KR')}</div>
   </div>`;
 
-  // 요약
   h += `<div class="grid grid-4 mb-16">
     ${[{l:'등록 학생',v:allStudents.length+'명',c:'var(--accent)',i:'👨‍🎓'},
        {l:'총 풀이 수',v:totalSolved,c:'var(--green)',i:'✏️'},
        {l:'평균 정확도',v:avgAcc+'%',c:'var(--orange)',i:'🎯'},
        {l:'활성 학습자',v:activeCount+'명',c:'var(--gold)',i:'🔥'}
     ].map(c=>`<div class="card text-center" style="padding:16px">
-      <div style="font-size:28px">${c.i}</div>
-      <div style="font-size:22px;font-weight:900;color:${c.c}">${c.v}</div>
-      <div style="font-size:11px;color:var(--sub)">${c.l}</div>
-    </div>`).join('')}</div>`;
+      <div style="font-size:28px">${c.i}</div><div style="font-size:22px;font-weight:900;color:${c.c}">${c.v}</div>
+      <div style="font-size:11px;color:var(--sub)">${c.l}</div></div>`).join('')}</div>`;
 
-  // 학생 테이블
   h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📋 학생별 현황</h3>
     <div style="overflow-x:auto"><table class="admin-table"><thead><tr>
-      ${['이름','레벨','XP','풀이 수','정답률','연속일','오답 수','최근 학습','상태'].map(x=>`<th>${x}</th>`).join('')}
+      ${['학년반','이름','레벨','XP','풀이 수','정답률','연속일','오답 수','최근 학습','상태'].map(x=>`<th>${x}</th>`).join('')}
     </tr></thead><tbody>`;
 
-  allStudents.forEach(st => {
+  allStudents.sort((a,b)=>b.xp-a.xp).forEach(st => {
     const status = st.streak>=3?{t:'활발',c:'var(--green)'}:st.streak>=1?{t:'보통',c:'var(--gold)'}:{t:'미참여',c:'var(--accent2)'};
-    h += `<tr${st.isCurrent?' style="background:rgba(108,99,255,0.05)"':''}>
-      <td style="font-weight:700">${st.name}</td>
-      <td><span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${st.lv}</span></td>
-      <td style="color:var(--gold)">⚡${st.xp}</td>
-      <td>${st.total}</td>
+    h += `<tr>
+      <td>${st.grade}-${st.cls}</td><td style="font-weight:700">${st.name}</td>
+      <td><span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${st.level}</span></td>
+      <td style="color:var(--gold)">⚡${st.xp}</td><td>${st.total}</td>
       <td style="color:${st.acc>=80?'var(--green)':st.acc>=60?'var(--gold)':'var(--accent2)'}">${st.acc}%</td>
-      <td>🔥${st.streak}일</td>
-      <td style="color:var(--accent2)">${st.wrongs}</td>
-      <td style="font-size:10px;color:var(--sub)">${st.lastDate}</td>
+      <td>🔥${st.streak}일</td><td style="color:var(--accent2)">${st.wrongs}</td>
+      <td style="font-size:10px;color:var(--sub)">${st.lastDate||'-'}</td>
       <td><span class="tag" style="background:${status.c}22;color:${status.c}">${status.t}</span></td>
     </tr>`;
   });
   h += `</tbody></table></div></div>`;
 
-  // 모듈별 분석
   h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📊 모듈별 참여 현황</h3>`;
+  const maxMod = Math.max(...MODULES.map(m => allStudents.reduce((s,st)=>s+(st.modSolved[m.id]||0),0)), 1);
   MODULES.forEach(m => {
-    const total = allStudents.reduce((s,st)=>s+(st.mods[m.id]||0),0);
-    const max = allStudents.length * 50;
-    h += `<div style="margin-bottom:12px">
-      <div class="flex justify-between mb-4"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;color:var(--sub)">총 ${total}문제</span></div>
-      <div class="pbar" style="height:12px;border-radius:6px"><div class="pfill" style="width:${total/max*100}%;background:linear-gradient(90deg,${m.color},${m.color}88);border-radius:6px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700">${total>0?total:''}</div></div>
-    </div>`;
+    const total = allStudents.reduce((s,st)=>s+(st.modSolved[m.id]||0),0);
+    h += `<div style="margin-bottom:12px"><div class="flex justify-between mb-4"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;color:var(--sub)">총 ${total}문제</span></div>
+      <div class="pbar" style="height:12px;border-radius:6px"><div class="pfill" style="width:${total/maxMod*100}%;background:linear-gradient(90deg,${m.color},${m.color}88);border-radius:6px;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700">${total>0?total:''}</div></div></div>`;
   });
   h += `</div>`;
 
   // AI 추천
   const weakStudents = allStudents.filter(s=>s.acc<70&&s.total>=10).sort((a,b)=>a.acc-b.acc);
-  const lowMods = MODULES.map(m=>({...m, total:allStudents.reduce((s,st)=>s+(st.mods[m.id]||0),0)})).sort((a,b)=>a.total-b.total);
-
+  const lowMods = MODULES.map(m=>({...m, total:allStudents.reduce((s,st)=>s+(st.modSolved[m.id]||0),0)})).sort((a,b)=>a.total-b.total);
   h += `<div class="card" style="background:rgba(108,99,255,0.04);border:1px solid rgba(108,99,255,0.15)">
     <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)">💡 AI 분석 & 추천</h3>
     <div style="font-size:13px;color:var(--sub);line-height:1.8">`;
-  if(weakStudents.length>0) h += `• <strong style="color:var(--accent2)">${weakStudents.map(s=>s.name).join(', ')}</strong> 학생의 정확도가 70% 미만입니다. 기초 연산부터 집중 보충이 필요합니다.<br>`;
-  h += `• 참여율이 가장 낮은 모듈: <strong style="color:${lowMods[0].color}">${lowMods[0].name}</strong> (${lowMods[0].total}문제). 수업 시간 활용을 권장합니다.<br>`;
+  if(weakStudents.length>0) h += `• <strong style="color:var(--accent2)">${weakStudents.map(s=>s.name).join(', ')}</strong> 학생의 정확도가 70% 미만입니다.<br>`;
+  if(lowMods.length>0) h += `• 참여율 최저 모듈: <strong style="color:${lowMods[0].color}">${lowMods[0].name}</strong> (${lowMods[0].total}문제)<br>`;
   const highStreaks = allStudents.filter(s=>s.streak>=5);
-  if(highStreaks.length>0) h += `• <strong style="color:var(--green)">${highStreaks.map(s=>s.name).join(', ')}</strong>의 연속 학습이 우수합니다. 도전 과제를 통해 동기를 유지하세요.<br>`;
-  const manyWrongs = allStudents.filter(s=>s.wrongs>=15).sort((a,b)=>b.wrongs-a.wrongs);
-  if(manyWrongs.length>0) h += `• <strong style="color:var(--orange)">${manyWrongs.map(s=>s.name).join(', ')}</strong>의 오답이 많습니다. 개별 오답노트 확인 후 면담을 권장합니다.<br>`;
+  if(highStreaks.length>0) h += `• <strong style="color:var(--green)">${highStreaks.map(s=>s.name).join(', ')}</strong>의 연속 학습 우수!<br>`;
+  if(allStudents.length>0 && totalSolved===0) h += `• 아직 학습을 시작한 학생이 없습니다. 수업 시간에 활용해보세요!<br>`;
   h += `</div></div>`;
 
-  // 성취도 분포
-  h += `<div class="card"><h3 style="font-size:16px;font-weight:800;margin-bottom:14px">📈 정확도 분포</h3>
-    <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:6px">`;
-  const ranges = [{l:'90%↑',min:90,c:'var(--green)'},{l:'80~89%',min:80,c:'var(--accent)'},{l:'70~79%',min:70,c:'var(--gold)'},{l:'60~69%',min:60,c:'var(--orange)'},{l:'60%↓',min:0,c:'var(--accent2)'}];
-  ranges.forEach((r,i) => {
-    const max = i===0?101:ranges[i-1].min;
-    const cnt = allStudents.filter(s=>s.acc>=r.min&&s.acc<max).length;
-    h += `<div class="text-center" style="padding:10px;background:${r.c}11;border-radius:10px;border:1px solid ${r.c}33">
-      <div style="font-size:20px;font-weight:800;color:${r.c}">${cnt}</div>
-      <div style="font-size:10px;color:var(--sub)">${r.l}</div>
+  return h;
+}
+
+// ── 관리자 랭킹 ──
+function renderAdminRank() {
+  const all = getAllStudentData().sort((a,b)=>b.xp-a.xp);
+  let h = `<div class="card">
+    <div class="flex justify-between items-center mb-16">
+      <h2 style="font-size:18px;font-weight:800;margin:0">🏆 전체 랭킹</h2>
+      <button class="btn btn-orange btn-sm no-print" onclick="window.print()">🖨️ 인쇄</button>
     </div>`;
-  });
-  h += `</div></div>`;
-
+  if(all.length===0) {
+    h += `<div class="text-center" style="padding:30px;color:var(--sub)">등록된 학생이 없습니다.</div>`;
+  } else {
+    all.forEach((e,i) => {
+      const colors = ['var(--gold)','#C0C0C0','#CD7F32'];
+      h += `<div class="flex items-center gap-10" style="padding:10px 14px;border-radius:12px;margin-bottom:6px;background:rgba(255,255,255,0.02)">
+        <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;background:${i<3?colors[i]+'22':'rgba(255,255,255,0.04)'};color:${i<3?colors[i]:'var(--sub)'}">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
+        <div style="flex:1"><span style="font-weight:600;font-size:13px">${e.grade}-${e.cls} ${e.name}</span></div>
+        <span style="font-size:10px;color:var(--sub)">${e.total}문제 · ${e.acc}%</span>
+        <span style="font-size:10px;color:var(--sub)">Lv.${e.level}</span>
+        <span style="font-weight:800;color:var(--gold);font-size:13px">⚡${e.xp.toLocaleString()}</span>
+      </div>`;
+    });
+  }
+  h += `</div>`;
   return h;
 }
 
@@ -1538,10 +1790,8 @@ function clearCanvas() {
 
 // ── 초기화 ──
 function init() {
-  if(!loadData()) {
-    renderNameInput();
-    return;
-  }
+  state.loggedIn = false;
+  state.view = 'login';
   render();
 }
 
