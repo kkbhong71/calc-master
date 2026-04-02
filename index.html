@@ -425,7 +425,7 @@ let state = {
 };
 
 const ADMIN_PW = "oseong2026";
-const DEFAULT_STU_PW = "1234";
+function defaultPw(g,c,n) { return String(g)+String(c)+String(n).padStart(2,'0'); }  // 예: 1학년1반5번 → "1105"
 
 const initData = () => ({
   name:'', grade:'', cls:'', number:'',
@@ -619,8 +619,9 @@ function renderLogin() {
                 ${filtered.map(s=>`<option value="${s.number}" ${state.selNumber===s.number?'selected':''}>${s.number}번 ${s.name}</option>`).join('')}
               </select>
               <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">비밀번호</div>
-              <input class="input input-sm mb-16" id="stu-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
+              <input class="input input-sm mb-8" id="stu-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
                 onkeydown="if(event.key==='Enter')loginStudent()">
+              <div style="font-size:10px;color:var(--sub);margin-bottom:12px">💡 초기 비밀번호: 학년+반+번호(2자리) 예) 1학년1반5번 → 1105</div>
             </div>
             <button class="btn btn-full" onclick="loginStudent()">🚀 학습 시작</button>
           `}
@@ -646,7 +647,7 @@ function loginStudent() {
   if(!pw) { $('#login-error').textContent = '비밀번호를 입력하세요.'; return; }
   const stu = school.students.find(s=>s.grade===g && s.cls===c && s.number===n);
   if(!stu) { $('#login-error').textContent = '학생 정보를 찾을 수 없습니다.'; return; }
-  if((stu.pw||DEFAULT_STU_PW) !== pw) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
+  if((stu.pw||defaultPw(g,c,n)) !== pw) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
 
   // 로그인 성공
   const existing = loadStudentData(g, c, n);
@@ -1331,6 +1332,18 @@ function renderProfile(lv, acc) {
   });
   h += `</div>`;
 
+  // 비밀번호 변경
+  h += `<div class="card no-print">
+    <div style="font-size:15px;font-weight:800;margin-bottom:14px">🔑 비밀번호 변경</div>
+    <div class="flex gap-8 flex-wrap items-center">
+      <input class="input input-sm" id="pw-current" type="password" placeholder="현재 비밀번호" style="flex:1;min-width:100px;text-align:center">
+      <input class="input input-sm" id="pw-new" type="password" placeholder="새 비밀번호" style="flex:1;min-width:100px;text-align:center">
+      <input class="input input-sm" id="pw-confirm" type="password" placeholder="새 비밀번호 확인" style="flex:1;min-width:100px;text-align:center">
+      <button class="btn btn-sm" onclick="changeMyPassword()">변경</button>
+    </div>
+    <div id="pw-msg" style="font-size:12px;margin-top:8px"></div>
+  </div>`;
+
   h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('내 학습 데이터를 초기화할까요?')){localStorage.removeItem(stuKey(data.grade,data.cls,data.number));logout()}">🗑️ 내 데이터 초기화</button>`;
   return h;
 }
@@ -1338,6 +1351,24 @@ function renderProfile(lv, acc) {
 function printProfile() { window.print(); }
 
 // ── 랭킹 ──
+// ── 학생 비밀번호 변경 ──
+function changeMyPassword() {
+  const cur = ($('#pw-current')||{}).value;
+  const nw = ($('#pw-new')||{}).value;
+  const cf = ($('#pw-confirm')||{}).value;
+  const msg = $('#pw-msg');
+  if(!cur||!nw||!cf) { msg.innerHTML='<span style="color:var(--accent2)">모든 항목을 입력하세요.</span>'; return; }
+  const school = getSchool();
+  const stu = school.students.find(s=>s.grade===data.grade&&s.cls===data.cls&&s.number===data.number);
+  if(!stu) { msg.innerHTML='<span style="color:var(--accent2)">학생 정보를 찾을 수 없습니다.</span>'; return; }
+  if((stu.pw||defaultPw(data.grade,data.cls,data.number)) !== cur) { msg.innerHTML='<span style="color:var(--accent2)">❌ 현재 비밀번호가 틀렸습니다.</span>'; return; }
+  if(nw.length<2) { msg.innerHTML='<span style="color:var(--accent2)">새 비밀번호는 2자리 이상이어야 합니다.</span>'; return; }
+  if(nw !== cf) { msg.innerHTML='<span style="color:var(--accent2)">새 비밀번호가 일치하지 않습니다.</span>'; return; }
+  stu.pw = nw;
+  saveSchool(school);
+  msg.innerHTML='<span style="color:var(--green)">✅ 비밀번호가 변경되었습니다!</span>';
+}
+
 // ═══════════════════════════════════════════════════════════
 // 🏆 실시간 랭킹 (학생용)
 // ═══════════════════════════════════════════════════════════
@@ -1393,7 +1424,7 @@ function renderAdminStudents() {
   // CSV 업로드
   h += `<div style="padding:16px;background:rgba(108,99,255,0.05);border:1px solid rgba(108,99,255,0.15);border-radius:14px;margin-bottom:16px">
     <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)">📤 학생 일괄 등록 (CSV/엑셀)</div>
-    <div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">엑셀에서 <strong>학년, 반, 번호, 이름</strong> 순서로 복사하여 아래에 붙여넣기하세요.<br>탭 또는 쉼표로 구분됩니다. 기존 명단에 추가됩니다.</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">엑셀에서 <strong>학년, 반, 번호, 이름</strong> 순서로 복사하여 아래에 붙여넣기하세요.<br>탭 또는 쉼표로 구분됩니다. 기존 명단에 추가됩니다.<br>🔑 초기 비밀번호: <strong style="color:var(--accent)">학년+반+번호(2자리)</strong> 자동 부여 (예: 1학년1반5번 → <code style="color:var(--gold)">1105</code>)</div>
     <textarea class="input input-sm" id="csv-input" rows="5" placeholder="1\t1\t1\t강지후&#10;1\t1\t2\t김가영&#10;1\t1\t3\t김건우" style="text-align:left;font-size:12px;resize:vertical;width:100%"></textarea>
     <div class="flex gap-8 mt-8">
       <button class="btn btn-sm" onclick="uploadCSV()">📥 등록하기</button>
@@ -1440,7 +1471,7 @@ function renderAdminStudents() {
           <td>${s.number}번</td>
           <td style="font-weight:700">${s.name}</td>
           <td>
-            <input class="input input-sm" value="${s.pw||DEFAULT_STU_PW}" style="width:80px;font-size:11px;padding:4px 8px;text-align:center"
+            <input class="input input-sm" value="${s.pw||defaultPw(s.grade,s.cls,s.number)}" style="width:80px;font-size:11px;padding:4px 8px;text-align:center"
               onchange="updateStudentPw('${s.grade}','${s.cls}','${s.number}',this.value)">
           </td>
           <td><button class="btn btn-red btn-sm" style="padding:3px 8px;font-size:10px"
@@ -1473,7 +1504,7 @@ function uploadCSV() {
     if(!grade||!cls||!number||!name) { skipped++; return; }
     const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===number);
     if(exists) { exists.name=name; skipped++; return; }
-    school.students.push({ grade, cls, number, name, pw: DEFAULT_STU_PW });
+    school.students.push({ grade, cls, number, name, pw: defaultPw(grade,cls,number) });
     added++;
   });
   saveSchool(school);
@@ -1499,7 +1530,7 @@ function addOneStudent() {
   const school = getSchool();
   const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===num);
   if(exists) { alert('이미 등록된 학생입니다.'); return; }
-  school.students.push({ grade, cls, number:num, name:name.trim(), pw: DEFAULT_STU_PW });
+  school.students.push({ grade, cls, number:num, name:name.trim(), pw: defaultPw(grade,cls,num) });
   saveSchool(school);
   render();
 }
@@ -1520,9 +1551,9 @@ function updateStudentPw(g,c,n,pw) {
 }
 
 function resetAllPasswords() {
-  if(!confirm('모든 학생의 비밀번호를 "'+DEFAULT_STU_PW+'"로 초기화할까요?')) return;
+  if(!confirm('모든 학생의 비밀번호를 초기 비밀번호(학년+반+번호)로 초기화할까요?\n예: 1학년 1반 5번 → 1105')) return;
   const school = getSchool();
-  school.students.forEach(s => s.pw = DEFAULT_STU_PW);
+  school.students.forEach(s => s.pw = defaultPw(s.grade, s.cls, s.number));
   saveSchool(school);
   render();
 }
