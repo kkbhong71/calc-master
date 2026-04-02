@@ -518,7 +518,7 @@ function render() {
       </div>
       <div class="flex items-center gap-8 no-print">
         ${state.isAdmin?'<span class="tag" style="background:rgba(255,107,107,0.15);color:var(--accent2)">👨‍🏫 관리자</span>':`<span style="font-size:12px;color:var(--gold);font-weight:700">⚡${data.xp}</span><span class="tag" style="background:rgba(108,99,255,0.15);color:var(--accent)">Lv.${lv.level}</span>`}
-        <button class="btn btn-gray btn-sm" onclick="logout()" style="padding:5px 10px;font-size:11px">🚪</button>
+        <button class="btn btn-red btn-sm" onclick="if(confirm('로그아웃 하시겠습니까?'))logout()" style="padding:6px 14px;font-size:12px">🚪 로그아웃</button>
       </div>
     </div>`;
 
