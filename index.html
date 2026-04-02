@@ -448,9 +448,8 @@ let data = initData();
 // 🌐 GAS API 통신
 // ═══════════════════════════════════════════════════════════
 async function gasAPI(action, params = {}) {
-  if(GAS_URL === 'https://script.google.com/macros/s/AKfycbxlA706Dgs7AGgVBgd7UcAzvKjl9WfC8E9ydad0ZOzu5sNnWq4BzCqeKQm-SdsLAX84Cg/exec') {
-    alert('⚠️ GAS_URL이 설정되지 않았습니다.\nindex.html 상단의 GAS_URL을 배포된 웹앱 URL로 변경하세요.');
-    return { ok: false, error: 'GAS_URL 미설정' };
+  if(GAS_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+    return { ok: false, error: 'GAS_URL_NOT_SET' };
   }
   try {
     const res = await fetch(GAS_URL, {
@@ -619,6 +618,22 @@ function renderLogin() {
         <div style="font-size:48px;margin-bottom:10px">🔢</div>
         <h1 style="font-size:22px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</h1>
         <p style="color:var(--sub);font-size:12px;margin-bottom:20px">기초 연산 집중 학습 프로그램</p>
+
+        ${GAS_URL==='YOUR_GAS_WEB_APP_URL_HERE' ? `
+          <div style="padding:20px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:14px;margin-bottom:16px;text-align:left">
+            <div style="font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:8px">⚠️ 서버 연결이 필요합니다</div>
+            <div style="font-size:12px;color:var(--sub);line-height:1.8">
+              <strong>index.html</strong> 파일을 열어 아래 부분을 수정하세요:<br><br>
+              <code style="font-size:11px;display:block;padding:8px;background:rgba(0,0,0,0.3);border-radius:8px;margin:4px 0;word-break:break-all">
+              const GAS_URL = '<span style="color:var(--accent2)">YOUR_GAS_WEB_APP_URL_HERE</span>';<br>
+              ↓<br>
+              const GAS_URL = '<span style="color:var(--green)">https://script.google.com/macros/s/배포URL/exec</span>';
+              </code><br>
+              설정 방법은 <strong>setup-guide.html</strong>을 참고하세요.
+            </div>
+          </div>
+        ` : ''}
+
         <div class="input-mode-toggle mb-16">
           <button class="mode-btn ${state.loginTab==='student'?'active':''}" onclick="state.loginTab='student';render()">🎒 학생 입장</button>
           <button class="mode-btn ${state.loginTab==='admin'?'active':''}" onclick="state.loginTab='admin';render()">👨‍🏫 관리자 입장</button>
@@ -1882,8 +1897,12 @@ function clearCanvas() {
 async function init() {
   state.loggedIn = false;
   state.view = 'login';
-  showLoading('서버 연결 중...');
-  await loadStudentList();
+  if(GAS_URL !== 'YOUR_GAS_WEB_APP_URL_HERE') {
+    showLoading('서버 연결 중...');
+    await loadStudentList();
+  } else {
+    render();
+  }
 }
 
 init();
