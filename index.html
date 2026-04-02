@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>오성 연산 마스터 v3.1 - 오성중학교 기초 연산 집중 학습</title>
+<title>오성 연산 마스터 v4.0 - 오성중학교 기초 연산 집중 학습</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
 :root {
@@ -160,6 +160,7 @@ select.input option { background: var(--bg2); color: var(--text); padding: 8px; 
 
 @keyframes pop { from { transform: scale(0.5); opacity:0 } to { transform: scale(1); opacity:1 } }
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+@keyframes spin { from { transform:rotate(0deg) } to { transform:rotate(360deg) } }
 
 /* 인쇄 스타일 */
 @media print {
@@ -245,7 +246,7 @@ select.input option { background: var(--bg2); color: var(--text); padding: 8px; 
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// 🔢 오성 연산 마스터 v3.1 — GitHub Pages 배포용
+// 🔢 오성 연산 마스터 v4.0 — GitHub Pages 배포용
 // ═══════════════════════════════════════════════════════════════
 
 // ── 유틸리티 ──
@@ -411,21 +412,26 @@ function genProblem(mod, lv) {
 }
 
 // ── 앱 상태 ──
+// ★★★ 아래 URL을 GAS 웹앱 배포 URL로 변경하세요 ★★★
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzioY5hliR-o6tYvpVY9HeUmZkNToqpwV2aOha8Nf8PIS4Z19ada-JnQ3ZVXOkgO0yppw/exec';
+
 let state = {
   view: 'login', curMod: null, level: 1,
   prob: null, ans: '', fb: null, hint: false,
   quiz: { cur:0, tot:10, ok:0, results:[] },
   timerMode: false, timerSec: 30, timerLeft: 30, timerInterval: null,
-  isAdmin: false, loggedIn: false,
+  isAdmin: false, loggedIn: false, loading: false,
   inputMode: 'keyboard',
   penSize: 3, penColor: '#ffffff', isEraser: false,
   canvasHistory: [],
-  loginTab: 'student', // 'student' or 'admin'
-  selGrade: '1', selClass: '1', selNumber: '',
+  loginTab: 'student',
+  selGrade: '', selClass: '', selNumber: '',
+  studentList: [],       // 서버에서 받은 학생 목록
+  rankingData: [],       // 서버에서 받은 랭킹
+  dashboardData: null,   // 서버에서 받은 대시보드
 };
 
-const ADMIN_PW = "oseong2026";
-function defaultPw(g,c,n) { return String(g)+String(c)+String(n).padStart(2,'0'); }  // 예: 1학년1반5번 → "1105"
+function defaultPw(g,c,n) { return String(g)+String(c)+String(n).padStart(2,'0'); }
 
 const initData = () => ({
   name:'', grade:'', cls:'', number:'',
@@ -438,52 +444,72 @@ const initData = () => ({
 
 let data = initData();
 
-// ── 학교 데이터 (학생 명단) ──
-function getSchool() {
+// ═══════════════════════════════════════════════════════════
+// 🌐 GAS API 통신
+// ═══════════════════════════════════════════════════════════
+async function gasAPI(action, params = {}) {
+  if(GAS_URL === 'https://script.google.com/macros/s/AKfycbzioY5hliR-o6tYvpVY9HeUmZkNToqpwV2aOha8Nf8PIS4Z19ada-JnQ3ZVXOkgO0yppw/exec') {
+    alert('⚠️ GAS_URL이 설정되지 않았습니다.\nindex.html 상단의 GAS_URL을 배포된 웹앱 URL로 변경하세요.');
+    return { ok: false, error: 'GAS_URL 미설정' };
+  }
   try {
-    const s = localStorage.getItem('cm_school');
-    if(s) return JSON.parse(s);
-  } catch{}
-  return { students: [], adminPw: ADMIN_PW };
-}
-function saveSchool(school) {
-  try { localStorage.setItem('cm_school', JSON.stringify(school)); } catch{}
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...params }),
+    });
+    return await res.json();
+  } catch(err) {
+    console.error('API 오류:', err);
+    return { ok: false, error: '서버 연결 실패: ' + err.message };
+  }
 }
 
-// ── 학생별 데이터 저장/로드 ──
-function stuKey(g,c,n) { return `cm_stu_${g}_${c}_${n}`; }
+function showLoading(msg) {
+  state.loading = true;
+  const app = $('#app');
+  if(app) app.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh">
+    <div style="font-size:40px;margin-bottom:16px;animation:spin 1s linear infinite">🔢</div>
+    <div style="color:var(--sub);font-size:14px">${msg || '로딩 중...'}</div>
+  </div>`;
+}
 
+// ── 학생별 데이터 저장 (서버) ──
+let saveTimer = null;
 function saveData() {
   if(!data.grade) return;
-  try { localStorage.setItem(stuKey(data.grade, data.cls, data.number), JSON.stringify(data)); } catch{}
-}
-function loadStudentData(g,c,n) {
-  try {
-    const s = localStorage.getItem(stuKey(g,c,n));
-    if(s) return {...initData(), ...JSON.parse(s)};
-  } catch{}
-  return null;
+  // 디바운스: 500ms 내 연속 호출 시 마지막 것만 실행
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    await gasAPI('saveProgress', {
+      grade: data.grade, cls: data.cls, number: data.number,
+      data: {
+        xp:data.xp, level:data.level, total:data.total, correct:data.correct,
+        streak:data.streak, lastDate:data.lastDate, consec:data.consec, maxConsec:data.maxConsec,
+        badges:data.badges, modSolved:data.modSolved, modCorrect:data.modCorrect,
+        wrongNotes:(data.wrongNotes||[]).slice(0,200),
+        timerComplete:data.timerComplete, noteReviewed:data.noteReviewed,
+        joinDate:data.joinDate,
+      }
+    });
+  }, 500);
 }
 
-// ── 전체 학생 랭킹 데이터 수집 ──
-function getAllStudentData() {
-  const school = getSchool();
-  const results = [];
-  school.students.forEach(st => {
-    const d = loadStudentData(st.grade, st.cls, st.number);
-    results.push({
-      name: st.name, grade: st.grade, cls: st.cls, number: st.number,
-      xp: d ? d.xp : 0, level: d ? getLv(d.xp).level : 1,
-      total: d ? d.total : 0, correct: d ? d.correct : 0,
-      streak: d ? d.streak : 0, wrongs: d ? (d.wrongNotes||[]).length : 0,
-      lastDate: d ? d.lastDate : '-',
-      acc: d && d.total>0 ? Math.round(d.correct/d.total*100) : 0,
-      modSolved: d ? d.modSolved||{} : {},
-      modCorrect: d ? d.modCorrect||{} : {},
-      badges: d ? d.badges||[] : [],
-    });
+// 즉시 저장 (퀴즈 종료 시 등)
+async function saveDataNow() {
+  if(!data.grade) return;
+  clearTimeout(saveTimer);
+  await gasAPI('saveProgress', {
+    grade: data.grade, cls: data.cls, number: data.number,
+    data: {
+      xp:data.xp, level:data.level, total:data.total, correct:data.correct,
+      streak:data.streak, lastDate:data.lastDate, consec:data.consec, maxConsec:data.maxConsec,
+      badges:data.badges, modSolved:data.modSolved, modCorrect:data.modCorrect,
+      wrongNotes:(data.wrongNotes||[]).slice(0,200),
+      timerComplete:data.timerComplete, noteReviewed:data.noteReviewed,
+      joinDate:data.joinDate,
+    }
   });
-  return results;
 }
 
 // ── 레벨 ──
@@ -513,7 +539,7 @@ function render() {
         <span style="font-size:26px">🔢</span>
         <div>
           <div style="font-size:17px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</div>
-          <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v3.1 · K.G.B</div>
+          <div style="font-size:9px;color:#555;letter-spacing:0.5px">오성중학교 · 기초 연산 집중 v4.0 · K.G.B</div>
         </div>
       </div>
       <div class="flex items-center gap-8 no-print">
@@ -552,7 +578,7 @@ function render() {
   }
 
   html += `<div class="text-center no-print" style="padding:20px 0 12px;font-size:10px;color:#333">
-    오성 연산 마스터 v3.1 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
+    오성 연산 마스터 v4.0 · 오성중학교 기초학력 향상 프로그램 · © 2026 Developed by K.G.B</div>`;
 
   app.innerHTML = html;
 
@@ -570,16 +596,22 @@ function render() {
 function go(view) {
   if(state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval=null; }
   state.view = view;
+  // 서버 데이터가 필요한 뷰: 자동 로드
+  if(view==='rank' && state.rankingData.length===0) { loadRanking(); return; }
+  if((view==='adminStudents'||view==='adminDash'||view==='adminRank') && !state.dashboardData) { state.view=view; loadDashboard(); return; }
   render();
 }
 
-// ── 이름 입력 → 로그인 시스템 ──
+// ── 로그인 시스템 (GAS 연동) ──
 function renderLogin() {
-  const school = getSchool();
-  const students = school.students || [];
-  
-  // 선택한 학년/반에 해당하는 학생 필터
+  const students = state.studentList || [];
   const filtered = students.filter(s => s.grade===state.selGrade && s.cls===state.selClass);
+  const grades = [...new Set(students.map(s=>s.grade))].sort();
+  const classes = [...new Set(students.filter(s=>s.grade===state.selGrade).map(s=>s.cls))].sort();
+
+  if(state.selGrade==='' && grades.length>0) { state.selGrade=grades[0]; }
+  if(state.selClass==='' && classes.length>0) { state.selClass=classes[0]; }
+  const filtered2 = students.filter(s => s.grade===state.selGrade && s.cls===state.selClass);
 
   $('#app').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;min-height:92vh">
@@ -587,96 +619,107 @@ function renderLogin() {
         <div style="font-size:48px;margin-bottom:10px">🔢</div>
         <h1 style="font-size:22px;font-weight:900;margin-bottom:4px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">오성 연산 마스터</h1>
         <p style="color:var(--sub);font-size:12px;margin-bottom:20px">기초 연산 집중 학습 프로그램</p>
-
-        <!-- 모드 선택 탭 -->
         <div class="input-mode-toggle mb-16">
           <button class="mode-btn ${state.loginTab==='student'?'active':''}" onclick="state.loginTab='student';render()">🎒 학생 입장</button>
           <button class="mode-btn ${state.loginTab==='admin'?'active':''}" onclick="state.loginTab='admin';render()">👨‍🏫 관리자 입장</button>
         </div>
-
         ${state.loginTab==='student' ? `
-          <!-- 학생 로그인 -->
           ${students.length===0 ? `
             <div style="padding:24px;background:rgba(255,159,67,0.08);border:1px solid rgba(255,159,67,0.2);border-radius:14px;margin-bottom:16px">
               <div style="font-size:32px;margin-bottom:8px">📋</div>
               <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:4px">학생 명단이 없습니다</div>
-              <div style="font-size:12px;color:var(--sub)">관리자가 먼저 학생 명단을 등록해야 합니다.<br>관리자 탭에서 로그인 후 학생을 추가하세요.</div>
+              <div style="font-size:12px;color:var(--sub)">관리자가 먼저 학생 명단을 등록해야 합니다.</div>
             </div>
+            <button class="btn btn-sm btn-gray btn-full" onclick="loadStudentList()">🔄 새로고침</button>
           ` : `
             <div style="text-align:left;margin-bottom:14px">
               <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">학년 · 반 선택</div>
               <div class="flex gap-8 mb-12">
-                <select class="input input-sm" style="flex:1;text-align:center" onchange="state.selGrade=this.value;state.selNumber='';render()">
-                  ${[...new Set(students.map(s=>s.grade))].sort().map(g=>`<option value="${g}" ${state.selGrade===g?'selected':''}>${g}학년</option>`).join('')}
+                <select class="input input-sm" style="flex:1;text-align:center" onchange="state.selGrade=this.value;state.selClass='';state.selNumber='';render()">
+                  ${grades.map(g=>`<option value="${g}" ${state.selGrade===g?'selected':''}>${g}학년</option>`).join('')}
                 </select>
                 <select class="input input-sm" style="flex:1;text-align:center" onchange="state.selClass=this.value;state.selNumber='';render()">
                   ${[...new Set(students.filter(s=>s.grade===state.selGrade).map(s=>s.cls))].sort().map(c=>`<option value="${c}" ${state.selClass===c?'selected':''}>${c}반</option>`).join('')}
                 </select>
               </div>
               <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">이름 선택</div>
-              <select class="input input-sm mb-12" style="text-align:center" onchange="state.selNumber=this.value;render()" id="stu-select">
+              <select class="input input-sm mb-12" style="text-align:center" onchange="state.selNumber=this.value;render()">
                 <option value="">-- 이름을 선택하세요 --</option>
-                ${filtered.map(s=>`<option value="${s.number}" ${state.selNumber===s.number?'selected':''}>${s.number}번 ${s.name}</option>`).join('')}
+                ${filtered2.map(s=>`<option value="${s.number}" ${state.selNumber===s.number?'selected':''}>${s.number}번 ${s.name}</option>`).join('')}
               </select>
               <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">비밀번호</div>
               <input class="input input-sm mb-8" id="stu-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
-                onkeydown="if(event.key==='Enter')loginStudent()">
+                onkeydown="if(event.key==='Enter')doLoginStudent()">
               <div style="font-size:10px;color:var(--sub);margin-bottom:12px">💡 초기 비밀번호: 학년+반+번호(2자리) 예) 1학년1반5번 → 1105</div>
             </div>
-            <button class="btn btn-full" onclick="loginStudent()">🚀 학습 시작</button>
+            <button class="btn btn-full" onclick="doLoginStudent()">🚀 학습 시작</button>
           `}
         ` : `
-          <!-- 관리자 로그인 -->
           <div style="text-align:left;margin-bottom:14px">
             <div style="font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:600">관리자 비밀번호</div>
             <input class="input input-sm mb-16" id="admin-pw" type="password" placeholder="비밀번호 입력" style="text-align:center"
-              onkeydown="if(event.key==='Enter')loginAdmin()">
+              onkeydown="if(event.key==='Enter')doLoginAdmin()">
           </div>
-          <button class="btn btn-full" onclick="loginAdmin()">🔑 관리자 로그인</button>
+          <button class="btn btn-full" onclick="doLoginAdmin()">🔑 관리자 로그인</button>
         `}
         <div id="login-error" style="color:var(--accent2);font-size:12px;margin-top:10px"></div>
       </div>
     </div>`;
 }
 
-function loginStudent() {
-  const school = getSchool();
+async function loadStudentList() {
+  showLoading('학생 목록 불러오는 중...');
+  const res = await gasAPI('getStudents');
+  if(res.ok) {
+    state.studentList = res.students;
+    if(res.students.length>0 && !state.selGrade) {
+      state.selGrade = res.students[0].grade;
+      state.selClass = res.students[0].cls;
+    }
+  }
+  state.loading = false;
+  render();
+}
+
+async function doLoginStudent() {
   const g = state.selGrade, c = state.selClass, n = state.selNumber;
   const pw = ($('#stu-pw')||{}).value;
   if(!n) { $('#login-error').textContent = '이름을 선택하세요.'; return; }
   if(!pw) { $('#login-error').textContent = '비밀번호를 입력하세요.'; return; }
-  const stu = school.students.find(s=>s.grade===g && s.cls===c && s.number===n);
-  if(!stu) { $('#login-error').textContent = '학생 정보를 찾을 수 없습니다.'; return; }
-  if((stu.pw||defaultPw(g,c,n)) !== pw) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
+
+  showLoading('로그인 중...');
+  const res = await gasAPI('login', { grade:g, cls:c, number:n, pw });
+  state.loading = false;
+
+  if(!res.ok) { render(); setTimeout(()=>{ const el=$('#login-error'); if(el) el.textContent='❌ '+res.error; },100); return; }
 
   // 로그인 성공
-  const existing = loadStudentData(g, c, n);
-  if(existing) {
-    data = existing;
+  if(res.data) {
+    data = { ...initData(), ...res.data, name:res.name, grade:g, cls:c, number:n };
   } else {
     data = initData();
-    data.name = stu.name;
-    data.grade = g; data.cls = c; data.number = n;
-    data.joinDate = new Date().toISOString().slice(0,10);
+    data.name=res.name; data.grade=g; data.cls=c; data.number=n;
+    data.joinDate=new Date().toISOString().slice(0,10);
   }
-  data.name = stu.name; data.grade=g; data.cls=c; data.number=n;
-  checkStreak();
-  saveData();
-  state.loggedIn = true; state.isAdmin = false; state.view = 'home';
+  checkStreak(); saveData();
+  state.loggedIn=true; state.isAdmin=false; state.view='home';
   render();
 }
 
-function loginAdmin() {
+async function doLoginAdmin() {
   const pw = ($('#admin-pw')||{}).value;
-  const school = getSchool();
-  if(pw !== (school.adminPw || ADMIN_PW)) { $('#login-error').textContent = '❌ 비밀번호가 틀렸습니다.'; return; }
-  state.loggedIn = true; state.isAdmin = true; state.view = 'adminStudents';
+  if(!pw) { $('#login-error').textContent = '비밀번호를 입력하세요.'; return; }
+  showLoading('로그인 중...');
+  const res = await gasAPI('adminLogin', { pw });
+  state.loading = false;
+  if(!res.ok) { render(); setTimeout(()=>{ const el=$('#login-error'); if(el) el.textContent='❌ '+res.error; },100); return; }
+  state.loggedIn=true; state.isAdmin=true; state.view='adminStudents';
   render();
 }
 
 function logout() {
-  state.loggedIn = false; state.isAdmin = false; state.view = 'login';
-  state.loginTab = 'student'; state.selNumber = '';
+  state.loggedIn=false; state.isAdmin=false; state.view='login';
+  state.loginTab='student'; state.selNumber='';
   data = initData();
   render();
 }
@@ -978,7 +1021,7 @@ function showBadgePopup(b) {
 function nextProblem() {
   if(state.quiz.cur >= state.quiz.tot) {
     if(state.timerMode) data.timerComplete = (data.timerComplete||0)+1;
-    saveData();
+    saveDataNow(); // 퀴즈 완료 시 즉시 서버 저장
     go('result');
     return;
   }
@@ -1344,7 +1387,7 @@ function renderProfile(lv, acc) {
     <div id="pw-msg" style="font-size:12px;margin-top:8px"></div>
   </div>`;
 
-  h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('내 학습 데이터를 초기화할까요?')){localStorage.removeItem(stuKey(data.grade,data.cls,data.number));logout()}">🗑️ 내 데이터 초기화</button>`;
+  h += `<button class="btn btn-red btn-sm btn-full no-print" onclick="if(confirm('내 학습 데이터를 초기화할까요?')){data=initData();saveDataNow().then(()=>logout())}">🗑️ 내 데이터 초기화</button>`;
   return h;
 }
 
@@ -1352,34 +1395,39 @@ function printProfile() { window.print(); }
 
 // ── 랭킹 ──
 // ── 학생 비밀번호 변경 ──
-function changeMyPassword() {
+async function changeMyPassword() {
   const cur = ($('#pw-current')||{}).value;
   const nw = ($('#pw-new')||{}).value;
   const cf = ($('#pw-confirm')||{}).value;
   const msg = $('#pw-msg');
   if(!cur||!nw||!cf) { msg.innerHTML='<span style="color:var(--accent2)">모든 항목을 입력하세요.</span>'; return; }
-  const school = getSchool();
-  const stu = school.students.find(s=>s.grade===data.grade&&s.cls===data.cls&&s.number===data.number);
-  if(!stu) { msg.innerHTML='<span style="color:var(--accent2)">학생 정보를 찾을 수 없습니다.</span>'; return; }
-  if((stu.pw||defaultPw(data.grade,data.cls,data.number)) !== cur) { msg.innerHTML='<span style="color:var(--accent2)">❌ 현재 비밀번호가 틀렸습니다.</span>'; return; }
   if(nw.length<2) { msg.innerHTML='<span style="color:var(--accent2)">새 비밀번호는 2자리 이상이어야 합니다.</span>'; return; }
   if(nw !== cf) { msg.innerHTML='<span style="color:var(--accent2)">새 비밀번호가 일치하지 않습니다.</span>'; return; }
-  stu.pw = nw;
-  saveSchool(school);
-  msg.innerHTML='<span style="color:var(--green)">✅ 비밀번호가 변경되었습니다!</span>';
+  msg.innerHTML='<span style="color:var(--accent)">⏳ 변경 중...</span>';
+  const res = await gasAPI('changeMyPassword', { grade:data.grade, cls:data.cls, number:data.number, currentPw:cur, newPw:nw });
+  if(res.ok) msg.innerHTML='<span style="color:var(--green)">✅ 비밀번호가 변경되었습니다!</span>';
+  else msg.innerHTML=`<span style="color:var(--accent2)">❌ ${res.error}</span>`;
 }
 
 // ═══════════════════════════════════════════════════════════
 // 🏆 실시간 랭킹 (학생용)
 // ═══════════════════════════════════════════════════════════
 function renderRank(lv) {
-  const all = getAllStudentData().sort((a,b)=>b.xp-a.xp);
+  const all = state.rankingData || [];
   const me = data.grade+'-'+data.cls+'-'+data.number;
 
-  let h = `<div class="card"><h2 style="font-size:18px;font-weight:800;text-align:center;margin-bottom:16px">🏆 오성 연산 마스터 랭킹</h2>`;
+  let h = `<div class="card">
+    <div class="flex justify-between items-center mb-16">
+      <h2 style="font-size:18px;font-weight:800;margin:0">🏆 실시간 랭킹</h2>
+      <button class="btn btn-sm btn-gray no-print" onclick="loadRanking()">🔄 새로고침</button>
+    </div>`;
   
   if(all.length===0) {
-    h += `<div class="text-center" style="padding:30px;color:var(--sub)">등록된 학생이 없습니다.</div>`;
+    h += `<div class="text-center" style="padding:30px;color:var(--sub)">
+      <div style="font-size:32px;margin-bottom:8px">🔄</div>
+      <div>랭킹을 불러오는 중이거나 데이터가 없습니다.</div>
+      <button class="btn btn-sm mt-8" onclick="loadRanking()">랭킹 불러오기</button>
+    </div>`;
   } else {
     all.forEach((e,i) => {
       const isMe = e.grade+'-'+e.cls+'-'+e.number === me;
@@ -1395,10 +1443,15 @@ function renderRank(lv) {
       </div>`;
     });
   }
-  h += `<div class="text-center mt-8" style="font-size:11px;color:#666;line-height:1.6">
-    같은 기기·같은 브라우저에서 로그인한 학생들의 실시간 랭킹입니다.
-  </div></div>`;
+  h += `</div>`;
   return h;
+}
+
+async function loadRanking() {
+  showLoading('랭킹 불러오는 중...');
+  const res = await gasAPI('getRanking');
+  if(res.ok) state.rankingData = res.ranking;
+  state.loading=false; state.view='rank'; render();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1407,34 +1460,31 @@ function renderRank(lv) {
 
 // ── 학생 관리 ──
 function renderAdminStudents() {
-  const school = getSchool();
-  const students = school.students || [];
+  const dData = state.dashboardData;
+  const students = dData ? dData.students || [] : [];
 
   let h = `<div class="card">
     <div class="flex justify-between items-center mb-16">
-      <div>
-        <h2 style="font-size:18px;font-weight:800;margin:0">👨‍🎓 학생 관리</h2>
-        <p style="color:var(--sub);font-size:12px">총 ${students.length}명 등록</p>
-      </div>
+      <div><h2 style="font-size:18px;font-weight:800;margin:0">👨‍🎓 학생 관리</h2>
+        <p style="color:var(--sub);font-size:12px">총 ${students.length}명 등록</p></div>
       <div class="flex gap-8">
+        <button class="btn btn-sm btn-gray" onclick="loadDashboard()">🔄 새로고침</button>
         <button class="btn btn-orange btn-sm" onclick="window.print()">🖨️</button>
       </div>
     </div>`;
 
-  // CSV 업로드
   h += `<div style="padding:16px;background:rgba(108,99,255,0.05);border:1px solid rgba(108,99,255,0.15);border-radius:14px;margin-bottom:16px">
     <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent)">📤 학생 일괄 등록 (CSV/엑셀)</div>
-    <div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">엑셀에서 <strong>학년, 반, 번호, 이름</strong> 순서로 복사하여 아래에 붙여넣기하세요.<br>탭 또는 쉼표로 구분됩니다. 기존 명단에 추가됩니다.<br>🔑 초기 비밀번호: <strong style="color:var(--accent)">학년+반+번호(2자리)</strong> 자동 부여 (예: 1학년1반5번 → <code style="color:var(--gold)">1105</code>)</div>
-    <textarea class="input input-sm" id="csv-input" rows="5" placeholder="1\t1\t1\t강지후&#10;1\t1\t2\t김가영&#10;1\t1\t3\t김건우" style="text-align:left;font-size:12px;resize:vertical;width:100%"></textarea>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">엑셀에서 <strong>학년, 반, 번호, 이름</strong> 순서로 복사하여 붙여넣기하세요.<br>🔑 초기 비밀번호: <strong style="color:var(--accent)">학년+반+번호(2자리)</strong> 자동 부여 (예: 1학년1반5번 → <code style="color:var(--gold)">1105</code>)</div>
+    <textarea class="input input-sm" id="csv-input" rows="4" placeholder="1\t1\t1\t강지후&#10;1\t1\t2\t김가영" style="text-align:left;font-size:12px;resize:vertical;width:100%"></textarea>
     <div class="flex gap-8 mt-8">
-      <button class="btn btn-sm" onclick="uploadCSV()">📥 등록하기</button>
+      <button class="btn btn-sm" onclick="doUploadCSV()">📥 등록하기</button>
       <button class="btn btn-sm btn-gray" onclick="$('#csv-file').click()">📁 파일 선택</button>
       <input type="file" id="csv-file" accept=".csv,.txt,.tsv" style="display:none" onchange="loadCSVFile(this)">
     </div>
     <div id="csv-result" style="font-size:12px;margin-top:8px"></div>
   </div>`;
 
-  // 개별 추가
   h += `<div style="padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;margin-bottom:16px">
     <div style="font-size:14px;font-weight:700;margin-bottom:10px">➕ 개별 학생 추가</div>
     <div class="flex gap-8 mb-8 flex-wrap">
@@ -1442,128 +1492,132 @@ function renderAdminStudents() {
       <input class="input input-sm" id="add-class" placeholder="반" style="width:70px;text-align:center">
       <input class="input input-sm" id="add-num" placeholder="번호" style="width:70px;text-align:center">
       <input class="input input-sm" id="add-name" placeholder="이름" style="flex:1;min-width:80px">
-      <button class="btn btn-sm btn-green" onclick="addOneStudent()">추가</button>
+      <button class="btn btn-sm btn-green" onclick="doAddStudent()">추가</button>
     </div>
   </div>`;
 
-  // 등록된 학생 목록
   if(students.length > 0) {
-    // 학년/반별 그룹
     const grouped = {};
-    students.forEach(s => {
-      const key = s.grade+'-'+s.cls;
-      if(!grouped[key]) grouped[key] = [];
-      grouped[key].push(s);
-    });
+    students.forEach(s => { const k=s.grade+'-'+s.cls; if(!grouped[k]) grouped[k]=[]; grouped[k].push(s); });
 
     Object.keys(grouped).sort().forEach(key => {
       const items = grouped[key].sort((a,b)=>parseInt(a.number)-parseInt(b.number));
       const [g,c] = key.split('-');
       h += `<div style="margin-bottom:16px">
-        <div class="flex justify-between items-center mb-8">
-          <span style="font-size:14px;font-weight:700">${g}학년 ${c}반 (${items.length}명)</span>
-        </div>
-        <div style="overflow-x:auto"><table class="admin-table"><thead><tr>
+        <span style="font-size:14px;font-weight:700">${g}학년 ${c}반 (${items.length}명)</span>
+        <div style="overflow-x:auto;margin-top:8px"><table class="admin-table"><thead><tr>
           <th>번호</th><th>이름</th><th>비밀번호</th><th style="width:60px">관리</th>
         </tr></thead><tbody>`;
       items.forEach(s => {
-        h += `<tr>
-          <td>${s.number}번</td>
-          <td style="font-weight:700">${s.name}</td>
-          <td>
-            <input class="input input-sm" value="${s.pw||defaultPw(s.grade,s.cls,s.number)}" style="width:80px;font-size:11px;padding:4px 8px;text-align:center"
-              onchange="updateStudentPw('${s.grade}','${s.cls}','${s.number}',this.value)">
-          </td>
+        h += `<tr><td>${s.number}번</td><td style="font-weight:700">${s.name}</td>
+          <td><input class="input input-sm" value="${s.pw||defaultPw(s.grade,s.cls,s.number)}" style="width:80px;font-size:11px;padding:4px 8px;text-align:center"
+            onchange="doUpdatePw('${s.grade}','${s.cls}','${s.number}',this.value)"></td>
           <td><button class="btn btn-red btn-sm" style="padding:3px 8px;font-size:10px"
-            onclick="removeStudent('${s.grade}','${s.cls}','${s.number}')">삭제</button></td>
-        </tr>`;
+            onclick="doRemoveStudent('${s.grade}','${s.cls}','${s.number}')">삭제</button></td></tr>`;
       });
       h += `</tbody></table></div></div>`;
     });
 
     h += `<div class="flex gap-8 mt-8">
-      <button class="btn btn-sm btn-orange" onclick="resetAllPasswords()">🔑 비밀번호 전체 초기화</button>
-      <button class="btn btn-sm btn-red" onclick="if(confirm('모든 학생 명단을 삭제할까요?')){saveSchool({students:[],adminPw:getSchool().adminPw||ADMIN_PW});render()}">🗑️ 전체 삭제</button>
+      <button class="btn btn-sm btn-orange" onclick="doResetAllPw()">🔑 비밀번호 전체 초기화</button>
+      <button class="btn btn-sm btn-red" onclick="doDeleteAll()">🗑️ 전체 삭제</button>
     </div>`;
   }
-
   h += `</div>`;
   return h;
 }
 
-function uploadCSV() {
+// ── 관리자 비동기 액션 ──
+async function doUploadCSV() {
   const raw = ($('#csv-input')||{}).value;
-  if(!raw || !raw.trim()) { $('#csv-result').innerHTML = '<span style="color:var(--accent2)">데이터를 입력하세요.</span>'; return; }
+  if(!raw || !raw.trim()) { $('#csv-result').innerHTML='<span style="color:var(--accent2)">데이터를 입력하세요.</span>'; return; }
   const lines = raw.trim().split('\n').filter(l=>l.trim());
-  const school = getSchool();
-  let added = 0, skipped = 0;
+  const newStudents = [];
   lines.forEach(line => {
-    const parts = line.split(/[\t,]/).map(s=>s.trim());
-    if(parts.length < 4) { skipped++; return; }
-    const [grade,cls,number,name] = parts;
-    if(!grade||!cls||!number||!name) { skipped++; return; }
-    const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===number);
-    if(exists) { exists.name=name; skipped++; return; }
-    school.students.push({ grade, cls, number, name, pw: defaultPw(grade,cls,number) });
-    added++;
+    const p = line.split(/[\t,]/).map(s=>s.trim());
+    if(p.length>=4 && p[0]&&p[1]&&p[2]&&p[3]) newStudents.push({grade:p[0],cls:p[1],number:p[2],name:p[3]});
   });
-  saveSchool(school);
-  $('#csv-result').innerHTML = `<span style="color:var(--green)">✅ ${added}명 추가 완료${skipped>0?` (${skipped}건 건너뜀)`:''}</span>`;
-  setTimeout(() => render(), 1000);
+  if(newStudents.length===0) { $('#csv-result').innerHTML='<span style="color:var(--accent2)">유효한 데이터가 없습니다.</span>'; return; }
+  
+  $('#csv-result').innerHTML='<span style="color:var(--accent)">⏳ 등록 중...</span>';
+  const res = await gasAPI('uploadStudents', { students: newStudents });
+  if(res.ok) {
+    $('#csv-result').innerHTML=`<span style="color:var(--green)">✅ ${res.added}명 추가 완료${res.skipped>0?` (${res.skipped}건 건너뜀)`:''}</span>`;
+    await loadDashboard();
+  } else {
+    $('#csv-result').innerHTML=`<span style="color:var(--accent2)">❌ ${res.error}</span>`;
+  }
 }
 
 function loadCSVFile(input) {
-  const file = input.files[0];
-  if(!file) return;
+  const file = input.files[0]; if(!file) return;
   const reader = new FileReader();
-  reader.onload = e => {
-    const el = $('#csv-input');
-    if(el) el.value = e.target.result;
-  };
+  reader.onload = e => { const el=$('#csv-input'); if(el) el.value=e.target.result; };
   reader.readAsText(file);
 }
 
-function addOneStudent() {
+async function doAddStudent() {
   const grade=($('#add-grade')||{}).value, cls=($('#add-class')||{}).value;
   const num=($('#add-num')||{}).value, name=($('#add-name')||{}).value;
   if(!grade||!cls||!num||!name) { alert('모든 항목을 입력하세요.'); return; }
-  const school = getSchool();
-  const exists = school.students.find(s=>s.grade===grade&&s.cls===cls&&s.number===num);
-  if(exists) { alert('이미 등록된 학생입니다.'); return; }
-  school.students.push({ grade, cls, number:num, name:name.trim(), pw: defaultPw(grade,cls,num) });
-  saveSchool(school);
-  render();
+  showLoading('학생 추가 중...');
+  const res = await gasAPI('addStudent', { grade, cls, number:num, name:name.trim() });
+  if(!res.ok) alert('❌ '+res.error);
+  await loadDashboard();
 }
 
-function removeStudent(g,c,n) {
+async function doRemoveStudent(g,c,n) {
   if(!confirm('이 학생을 삭제할까요?')) return;
-  const school = getSchool();
-  school.students = school.students.filter(s=>!(s.grade===g&&s.cls===c&&s.number===n));
-  saveSchool(school);
-  try { localStorage.removeItem(stuKey(g,c,n)); } catch{}
-  render();
+  showLoading('삭제 중...');
+  await gasAPI('removeStudent', { grade:g, cls:c, number:n });
+  await loadDashboard();
 }
 
-function updateStudentPw(g,c,n,pw) {
-  const school = getSchool();
-  const stu = school.students.find(s=>s.grade===g&&s.cls===c&&s.number===n);
-  if(stu) { stu.pw = pw; saveSchool(school); }
+async function doUpdatePw(g,c,n,pw) {
+  await gasAPI('updatePassword', { grade:g, cls:c, number:n, pw });
 }
 
-function resetAllPasswords() {
-  if(!confirm('모든 학생의 비밀번호를 초기 비밀번호(학년+반+번호)로 초기화할까요?\n예: 1학년 1반 5번 → 1105')) return;
-  const school = getSchool();
-  school.students.forEach(s => s.pw = defaultPw(s.grade, s.cls, s.number));
-  saveSchool(school);
+async function doResetAllPw() {
+  if(!confirm('모든 학생의 비밀번호를 초기화할까요?\n(학년+반+번호 형태)')) return;
+  showLoading('초기화 중...');
+  await gasAPI('resetAllPasswords');
+  await loadDashboard();
+}
+
+async function doDeleteAll() {
+  if(!confirm('모든 학생 명단을 삭제할까요?')) return;
+  const dd = state.dashboardData;
+  if(!dd) return;
+  showLoading('삭제 중...');
+  for(const s of dd.students) {
+    await gasAPI('removeStudent', { grade:s.grade, cls:s.cls, number:s.number });
+  }
+  await loadDashboard();
+}
+
+async function loadDashboard() {
+  showLoading('데이터 불러오는 중...');
+  const res = await gasAPI('getDashboard');
+  if(res.ok) {
+    state.dashboardData = res;
+    state.studentList = res.students.map(s=>({grade:s.grade,cls:s.cls,number:s.number,name:s.name}));
+  }
+  state.loading=false;
   render();
 }
 
 // ── 관리자 현황 대시보드 ──
 function renderAdminDash() {
-  const allStudents = getAllStudentData();
+  const dd = state.dashboardData;
+  if(!dd || !dd.students) {
+    return `<div class="card text-center" style="padding:40px"><div style="font-size:48px;margin-bottom:12px">🔄</div>
+      <div style="font-size:14px;color:var(--sub);margin-bottom:12px">데이터를 불러오는 중이거나 아직 로드되지 않았습니다.</div>
+      <button class="btn btn-sm" onclick="loadDashboard()">📊 데이터 불러오기</button></div>`;
+  }
+  const allStudents = dd.students;
   if(allStudents.length===0) {
     return `<div class="card text-center" style="padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div>
-      <div style="font-size:14px;color:var(--sub)">등록된 학생이 없습니다. 학생관리 탭에서 먼저 학생을 추가하세요.</div></div>`;
+      <div style="font-size:14px;color:var(--sub)">등록된 학생이 없습니다.</div></div>`;
   }
 
   const avgAcc = Math.round(allStudents.reduce((s,st)=>s+st.acc,0)/allStudents.length);
@@ -1634,11 +1688,15 @@ function renderAdminDash() {
 
 // ── 관리자 랭킹 ──
 function renderAdminRank() {
-  const all = getAllStudentData().sort((a,b)=>b.xp-a.xp);
+  const dd = state.dashboardData;
+  const all = dd ? (dd.students||[]).sort((a,b)=>b.xp-a.xp) : [];
   let h = `<div class="card">
     <div class="flex justify-between items-center mb-16">
       <h2 style="font-size:18px;font-weight:800;margin:0">🏆 전체 랭킹</h2>
-      <button class="btn btn-orange btn-sm no-print" onclick="window.print()">🖨️ 인쇄</button>
+      <div class="flex gap-8">
+        <button class="btn btn-sm btn-gray no-print" onclick="loadDashboard()">🔄 새로고침</button>
+        <button class="btn btn-orange btn-sm no-print" onclick="window.print()">🖨️ 인쇄</button>
+      </div>
     </div>`;
   if(all.length===0) {
     h += `<div class="text-center" style="padding:30px;color:var(--sub)">등록된 학생이 없습니다.</div>`;
@@ -1821,10 +1879,11 @@ function clearCanvas() {
 }
 
 // ── 초기화 ──
-function init() {
+async function init() {
   state.loggedIn = false;
   state.view = 'login';
-  render();
+  showLoading('서버 연결 중...');
+  await loadStudentList();
 }
 
 init();
